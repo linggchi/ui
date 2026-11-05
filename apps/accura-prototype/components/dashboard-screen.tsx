@@ -211,7 +211,7 @@ export function DashboardScreen({ onOpenDocuments }: DashboardScreenProps) {
             Tuesday, 3 November 2026
           </p>
           <h1 className="font-bold text-2xl leading-tight">
-            Good morning, Amit
+            Good morning, a Tùng đẹp trai
           </h1>
           <p className="text-muted-foreground text-sm">
             Here’s what needs your attention across Accura today.
