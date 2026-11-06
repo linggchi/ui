@@ -6,7 +6,7 @@ This is the canonical history of Accura product, design-system, and prototype de
 
 ### Decision
 
-Role details is a view-only surface. Disable the role name, description, module switches, and permission radios instead of allowing temporary edits. Keep every module visible, show no permission level for an uncovered module, and show the three full permission labels — Read only, Read and write, and Read and write all records — on one row for every covered module.
+Role details is a view-only surface. Disable the role name, description, module switches, and permission radios instead of allowing temporary edits. Keep every module visible, show no permission level for an uncovered module, and show the three full permission labels — Read only, Read and write, and Read and write all records — on one row for every covered module. Keep every module name at the same text emphasis; the switch alone communicates whether coverage is on or off.
 
 **Supersedes** [Role details are live, not locked](#2026-11-05---role-details-are-live-not-locked). The module coverage model and full permission wording remain current.
 

@@ -63,6 +63,9 @@ This file owns implementation verification and visual evidence for the executabl
 - Information-panel implementation: `/Users/mac/Documents/GitHub/Coss/apps/accura-prototype/implementation-information-panel.png`
 - Information-panel comparison: `/Users/mac/Documents/GitHub/Coss/apps/accura-prototype/qa-comparison-information-panel.png`
 - Read-only role-details evidence: `/Users/mac/Documents/GitHub/Coss/apps/accura-prototype/audit/2026-11-06-localhost-review/05-role-details-read-only.jpg`
+- Module-label source: `/Users/mac/Documents/GitHub/Coss/apps/accura-prototype/audit/2026-11-06-module-labels/reference-module-labels-muted.png`
+- Consistent module-label implementation: `/Users/mac/Documents/GitHub/Coss/apps/accura-prototype/audit/2026-11-06-module-labels/implementation-module-labels-equal.jpg`
+- Module-label focused comparison: `/Users/mac/Documents/GitHub/Coss/apps/accura-prototype/audit/2026-11-06-module-labels/comparison-module-labels.jpg`
 - State: light theme, expanded sidebar, default filters, page 1, 10 rows.
 - Latest captured viewport: 1265 × 712 CSS px in the in-app browser.
 - Desktop implementation remains the primary target; the narrow capture was also used to verify that the shell does not introduce horizontal page overflow.
@@ -136,6 +139,15 @@ The implementation now intentionally differs from the older Accura demo and the 
 - Changed-file Biome lint (`components/dashboard-screen.tsx`): passed. The current app-wide lint command also scans existing generated `.vercel/output` files and fails there; no diagnostic points to the changed dashboard component.
 
 ## Comparison History
+
+### Iteration 27 – Consistent module labels
+
+- Source visual truth: the supplied 1010 × 377 px screenshot showed Settings and Knowledge Hub at muted emphasis while covered module names used the standard foreground.
+- Fix: removed coverage-dependent typography from module names. Every module now uses the same Cal Sans role, `font-medium`, `text-sm`, line height, and foreground color; only the disabled switch communicates off coverage.
+- Implementation evidence: 1280 × 720 px browser screenshot at the default desktop viewport and 1× normalized capture density, with the Normal User role dialog scrolled to the covered and uncovered module boundary.
+- Focused comparison: `comparison-module-labels.jpg` places the source crop and implementation crop side by side. A focused region was required because the defect concerned text emphasis at the bottom of the scrollable dialog.
+- Required fidelity surfaces: typography now matches across every module; row spacing, dividers, radii, switch colors, copy, and all image assets remain unchanged.
+- Verification: TypeScript and Biome lint pass; browser console contains no warnings or errors. No actionable P0, P1, or P2 differences remain in the requested scope.
 
 ### Iteration 26 – Read-only role details
 

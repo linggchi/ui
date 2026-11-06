@@ -579,15 +579,7 @@ function RoleDetailsDialog({
                     return (
                       <div className="border-b last:border-b-0" key={module}>
                         <div className="flex items-center justify-between gap-4 px-4 py-3">
-                          <span
-                            className={
-                              covered
-                                ? "font-medium text-sm"
-                                : "text-muted-foreground text-sm"
-                            }
-                          >
-                            {module}
-                          </span>
+                          <span className="font-medium text-sm">{module}</span>
                           <Switch checked={covered} disabled />
                         </div>
 

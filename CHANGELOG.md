@@ -4,7 +4,7 @@ This root file is the concise chronological index for notable Accura changes. It
 
 ## 2026-11-06
 
-- Restored Role details to a true read-only view: role fields, module switches, and permission radios are disabled, while the three full permission labels remain visible on one row per covered module. [Decision](docs/change-log/DECISIONS.md#2026-11-06---role-details-are-read-only) · [QA evidence](apps/accura-prototype/design-qa.md#iteration-26--read-only-role-details)
+- Restored Role details to a true read-only view: role fields, module switches, and permission radios are disabled, the three full permission labels remain visible on one row per covered module, and every module name keeps the same text emphasis whether coverage is on or off. [Decision](docs/change-log/DECISIONS.md#2026-11-06---role-details-are-read-only) · [QA evidence](apps/accura-prototype/design-qa.md#iteration-27--consistent-module-labels)
 
 ## 2026-11-05
 
