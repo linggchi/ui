@@ -3,7 +3,6 @@
 import { Avatar, AvatarFallback } from "@coss/ui/components/avatar";
 import { Badge } from "@coss/ui/components/badge";
 import { Button } from "@coss/ui/components/button";
-import { Checkbox } from "@coss/ui/components/checkbox";
 import {
   Combobox,
   ComboboxChip,
@@ -46,6 +45,7 @@ import {
   MenuPopup,
   MenuTrigger,
 } from "@coss/ui/components/menu";
+import { Radio, RadioGroup } from "@coss/ui/components/radio-group";
 import {
   Select,
   SelectItem,
@@ -61,6 +61,7 @@ import {
   TableHeader,
   TableRow,
 } from "@coss/ui/components/table";
+import { Textarea } from "@coss/ui/components/textarea";
 import { toastManager } from "@coss/ui/components/toast";
 import {
   Building as BuildingIcon,
@@ -109,7 +110,7 @@ type EditableUser = {
   email: string;
   id: string;
   name: string;
-  roles: string[];
+  role: string;
   status: UserStatus;
 };
 
@@ -117,7 +118,7 @@ type UserFormState = {
   departments: string[];
   email: string;
   name: string;
-  roles: string[];
+  role: string;
 };
 
 type NavItem = {
@@ -190,28 +191,35 @@ const userModules = modules.filter(
 const accessLevels: {
   detail: string;
   label: string;
+  // Short form for the per-module row, where all three sit side by side and
+  // the full labels would not fit. The full label and wording stay in the
+  // legend, which is what US-005 AC-03 asks to be shown.
+  short: string;
   value: AccessLevel;
 }[] = [
   {
     detail: "View approved or completed records.",
     label: "Read only",
+    short: "Read",
     value: "read",
   },
   {
     detail:
       "Create new records; view, edit, review, or approve existing records only when owned or assigned to the user.",
     label: "Read and write",
+    short: "Read and write",
     value: "write",
   },
   {
     detail:
       "Create new records; view, edit, review, or approve all existing records regardless of ownership or assignment.",
     label: "Read and write all records",
+    short: "All records",
     value: "write_all",
   },
 ];
 
-const accessLabels: Record<AccessLevel, string> = Object.fromEntries(
+const _accessLabels: Record<AccessLevel, string> = Object.fromEntries(
   accessLevels.map((level) => [level.value, level.label]),
 ) as Record<AccessLevel, string>;
 
@@ -254,7 +262,7 @@ const initialUsers: EditableUser[] = [
     email: "sarah.johnson@example.com",
     id: "u-1",
     name: "Sarah Johnson",
-    roles: ["Read-only User"],
+    role: "Read-only User",
     status: "Active",
   },
   {
@@ -262,7 +270,7 @@ const initialUsers: EditableUser[] = [
     email: "james.obrien@example.com",
     id: "u-2",
     name: "James O’Brien",
-    roles: ["Normal User"],
+    role: "Normal User",
     status: "Active",
   },
   {
@@ -270,7 +278,7 @@ const initialUsers: EditableUser[] = [
     email: "amit.kothari@example.com",
     id: "u-3",
     name: "Amit Kothari",
-    roles: ["Admin"],
+    role: "Admin",
     status: "Active",
   },
   // Seeded so every status and the departments column are visible on load.
@@ -279,7 +287,7 @@ const initialUsers: EditableUser[] = [
     email: "priya.menon@example.com",
     id: "u-4",
     name: "Priya Menon",
-    roles: ["Normal User"],
+    role: "Normal User",
     status: "Invitation pending",
   },
   {
@@ -287,7 +295,7 @@ const initialUsers: EditableUser[] = [
     email: "daniel.ferreira@example.com",
     id: "u-5",
     name: "Daniel Ferreira",
-    roles: ["Read-only User"],
+    role: "Read-only User",
     status: "Inactive",
   },
 ];
@@ -386,7 +394,7 @@ const emptyForm: UserFormState = {
   departments: [],
   email: "",
   name: "",
-  roles: [],
+  role: "",
 };
 
 function countLabel(count: number, noun: string) {
@@ -517,79 +525,107 @@ function RoleDetailsDialog({
   onOpenChange: (open: boolean) => void;
   role: Role | null;
 }) {
-  const grantedLevels = role
-    ? accessLevels.filter((level) =>
-        role.modules.some((module) => role.access[module] === level.value),
-      )
-    : [];
-
   return (
     <Dialog onOpenChange={onOpenChange} open={role !== null}>
-      <DialogPopup className="sm:max-w-2xl">
+      <DialogPopup className="sm:max-w-3xl">
         {role && (
           <>
             <DialogHeader>
               <DialogTitle>{role.name}</DialogTitle>
               <DialogDescription>
-                Built-in role details. Access levels are managed by the system
-                and cannot be changed here.
+                Built-in role details. Access levels are managed by the system.
               </DialogDescription>
             </DialogHeader>
-            {/* role.description is left out on purpose: it restates the
-                access level (already the footnote) and the module list
-                (already the table's first column). It stays in the role list,
-                where it is the only summary available. */}
+            {/* Laid out as the create/edit role form from the mockup, with
+                every control locked. Keeping one shape for viewing and for the
+                deferred create/edit story means the field order, labels and
+                grouping do not have to be relearned when that story lands. */}
             <DialogPanel className="flex flex-col gap-5">
+              <Field>
+                <FormLabel>Role name</FormLabel>
+                <Input
+                  className="has-disabled:bg-[var(--accura-canvas)] has-disabled:opacity-100 has-disabled:*:text-muted-foreground"
+                  disabled
+                  readOnly
+                  type="text"
+                  value={role.name}
+                />
+              </Field>
+
+              <Field>
+                <FormLabel optional>Description</FormLabel>
+                <Textarea
+                  className="min-h-20 disabled:bg-[var(--accura-canvas)] disabled:text-muted-foreground disabled:opacity-100"
+                  disabled
+                  readOnly
+                  value={role.description}
+                />
+              </Field>
+
               <div className="flex flex-col gap-2">
-                <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="font-bold text-base">Module access</h3>
-                  <span className="text-muted-foreground text-xs">
-                    {countLabel(role.modules.length, "module")}
-                  </span>
-                </div>
+                <p className="font-medium text-base/4.5 sm:text-sm/4">
+                  Module access
+                </p>
+                <p className="-mt-1 text-muted-foreground text-sm">
+                  Every module the role covers, with the access level it grants.
+                </p>
 
+                {/* One row per module with all three levels side by side.
+                    Tabs showed a single module at a time, so a role that
+                    varies by module — write on Documents, read elsewhere —
+                    could not be read without clicking through every tab, and
+                    the tab row overflowed the dialog at eight modules. */}
                 <div className="overflow-hidden rounded-xl border">
-                  <Table>
-                    <TableHeader className="bg-secondary/72">
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="ps-5 text-xs">Module</TableHead>
-                        <TableHead className="w-[230px] pe-4 text-xs">
-                          Access level
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {role.modules.map((module) => (
-                        <TableRow className="hover:bg-transparent" key={module}>
-                          <TableCell className="ps-4 font-medium">
-                            {module}
-                          </TableCell>
-                          <TableCell className="pe-4">
-                            {accessLabels[role.access[module]]}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  {role.modules.map((module) => (
+                    <div
+                      className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b px-4 py-3 last:border-b-0"
+                      key={module}
+                    >
+                      <span className="font-medium text-sm">{module}</span>
+                      <RadioGroup
+                        aria-label={`Access level for ${module}`}
+                        className="flex flex-row flex-wrap items-center gap-x-5 gap-y-1"
+                        readOnly
+                        value={role.access[module] ?? ""}
+                      >
+                        {accessLevels.map((level) => {
+                          const granted = role.access[module] === level.value;
+                          return (
+                            <label
+                              className="flex items-center gap-2"
+                              key={level.value}
+                            >
+                              <Radio disabled value={level.value} />
+                              <span
+                                className={
+                                  granted
+                                    ? "font-medium text-sm"
+                                    : "text-muted-foreground text-sm"
+                                }
+                              >
+                                {level.short}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </RadioGroup>
+                    </div>
+                  ))}
                 </div>
-              </div>
 
-              {/* Only the levels this role actually grants. Defining all three
-                  would explain two levels the role never uses, and a second
-                  two-column block directly under the table reads as a second
-                  table. */}
-              <div className="flex flex-col gap-1.5 border-t pt-4">
-                {grantedLevels.map((level) => (
-                  <p
-                    className="text-muted-foreground text-xs leading-snug"
-                    key={level.value}
-                  >
-                    <span className="font-medium text-foreground">
-                      {level.label}
-                    </span>{" "}
-                    – {level.detail}
-                  </p>
-                ))}
+                <dl className="flex flex-col gap-1.5 pt-1">
+                  {accessLevels.map((level) => (
+                    <div
+                      className="grid grid-cols-[150px_minmax(0,1fr)] gap-x-3 max-sm:grid-cols-1"
+                      key={level.value}
+                    >
+                      <dt className="font-medium text-xs">{level.label}</dt>
+                      <dd className="text-muted-foreground text-xs leading-snug">
+                        {level.detail}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
               </div>
             </DialogPanel>
             <DialogFooter>
@@ -723,40 +759,34 @@ function UserFormDialog({
 
           <div className="flex flex-col gap-2">
             <p className="font-medium text-base/4.5 sm:text-sm/4">
-              Roles
+              Role
               <span aria-hidden="true" className="ms-0.5 text-destructive">
                 *
               </span>
             </p>
-            <div className="flex flex-col gap-2">
-              {roles.map((role) => {
-                const checked = form.roles.includes(role.name);
-                return (
-                  <label
-                    className="flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-colors hover:bg-secondary/72 has-[[data-checked]]:border-primary/32 has-[[data-checked]]:bg-secondary"
-                    key={role.name}
-                  >
-                    <Checkbox
-                      checked={checked}
-                      onCheckedChange={(next) =>
-                        setForm({
-                          ...form,
-                          roles: next
-                            ? [...form.roles, role.name]
-                            : form.roles.filter((name) => name !== role.name),
-                        })
-                      }
-                    />
-                    <span className="flex min-w-0 flex-col gap-0.5">
-                      <span className="font-medium text-sm">{role.name}</span>
-                      <span className="text-muted-foreground text-xs">
-                        {role.modules.join(", ")}
-                      </span>
+            <RadioGroup
+              aria-label="Role"
+              className="flex flex-col gap-2"
+              onValueChange={(value: unknown) =>
+                setForm({ ...form, role: String(value) })
+              }
+              value={form.role}
+            >
+              {roles.map((role) => (
+                <label
+                  className="flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-colors hover:bg-secondary/72 has-[[data-checked]]:border-primary/32 has-[[data-checked]]:bg-secondary"
+                  key={role.name}
+                >
+                  <Radio value={role.name} />
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="font-medium text-sm">{role.name}</span>
+                    <span className="text-muted-foreground text-xs">
+                      {role.modules.join(", ")}
                     </span>
-                  </label>
-                );
-              })}
-            </div>
+                  </span>
+                </label>
+              ))}
+            </RadioGroup>
           </div>
 
           {error && (
@@ -832,7 +862,7 @@ export function SettingsScreen() {
   }, [typeQuery]);
 
   const assignedCount = (roleName: string) =>
-    users.filter((user) => user.roles.includes(roleName)).length;
+    users.filter((user) => user.role === roleName).length;
 
   const openInvite = () => {
     setEditingId(null);
@@ -847,7 +877,7 @@ export function SettingsScreen() {
       departments: [...user.departments],
       email: user.email,
       name: user.name,
-      roles: [...user.roles],
+      role: user.role,
     });
     setFormError(null);
     setFormOpen(true);
@@ -876,8 +906,8 @@ export function SettingsScreen() {
       );
       return;
     }
-    if (form.roles.length === 0) {
-      setFormError("Select at least one role to continue.");
+    if (!form.role) {
+      setFormError("Select a role to continue.");
       return;
     }
 
@@ -887,7 +917,7 @@ export function SettingsScreen() {
       setUsers((current) =>
         current.map((user) =>
           user.id === editingId
-            ? { ...user, departments, email, name, roles: [...form.roles] }
+            ? { ...user, departments, email, name, role: form.role }
             : user,
         ),
       );
@@ -903,7 +933,7 @@ export function SettingsScreen() {
           email,
           id: `u-${current.length + 1}-${Date.now()}`,
           name,
-          roles: [...form.roles],
+          role: form.role,
           status: "Invitation pending",
         },
       ]);
@@ -1016,7 +1046,7 @@ export function SettingsScreen() {
                             Status
                           </TableHead>
                           <TableHead className="min-w-[200px] text-xs">
-                            Roles
+                            Role
                           </TableHead>
                           <TableHead className="w-[200px] text-xs">
                             Departments
@@ -1044,18 +1074,10 @@ export function SettingsScreen() {
                                   {user.status}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="whitespace-normal">
-                                <div className="flex flex-wrap gap-1.5">
-                                  {user.roles.map((role) => (
-                                    <Badge
-                                      key={role}
-                                      size="lg"
-                                      variant="outline"
-                                    >
-                                      {role}
-                                    </Badge>
-                                  ))}
-                                </div>
+                              <TableCell>
+                                <Badge size="lg" variant="outline">
+                                  {user.role}
+                                </Badge>
                               </TableCell>
                               <TableCell className="max-w-[220px] text-sm">
                                 {/* Truncated rather than wrapped: a second
@@ -1168,7 +1190,6 @@ export function SettingsScreen() {
                           <TableHead className="w-[30%] text-xs">
                             Description
                           </TableHead>
-                          <TableHead className="text-xs">Modules</TableHead>
                           <TableHead className="w-[120px] text-xs">
                             Users assigned
                           </TableHead>
@@ -1190,28 +1211,6 @@ export function SettingsScreen() {
                               <TableCell className="whitespace-normal align-top text-muted-foreground text-sm leading-snug">
                                 {role.description || "—"}
                               </TableCell>
-                              <TableCell className="whitespace-normal align-top">
-                                <div className="flex flex-wrap gap-1.5">
-                                  {role.modules.length === modules.length ? (
-                                    // Listing all eight when the role covers
-                                    // every module is noise; the single badge
-                                    // says the same thing in one line.
-                                    <Badge size="lg" variant="outline">
-                                      All modules
-                                    </Badge>
-                                  ) : (
-                                    role.modules.map((module) => (
-                                      <Badge
-                                        key={module}
-                                        size="lg"
-                                        variant="outline"
-                                      >
-                                        {module}
-                                      </Badge>
-                                    ))
-                                  )}
-                                </div>
-                              </TableCell>
                               <TableCell className="align-top">
                                 <span className="identifier text-sm">
                                   {assignedCount(role.name)}
@@ -1230,7 +1229,7 @@ export function SettingsScreen() {
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={5}>
+                            <TableCell colSpan={4}>
                               <Empty>
                                 <EmptyHeader>
                                   <EmptyMedia variant="icon">

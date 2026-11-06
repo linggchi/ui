@@ -2,6 +2,52 @@
 
 This is the canonical history of Accura product, design-system, and prototype decisions. It records why a direction was chosen and preserves superseded directions. Current product facts live in `docs/product-knowledge/`; current rules live in `docs/rules/`; implemented changes are indexed in root `CHANGELOG.md`.
 
+## 2026-11-05 - Role permissions are read as one list, not one module at a time
+
+### Decision
+
+Show every module the role covers as a row, each with the three access levels side by side and the granted one selected. Drop the module tab strip, the duplicated module chips, and the Modules column in the Roles & Permissions list, which now carries role name, description, users assigned, and the action.
+
+**Supersedes** the permissions portion of [Role details reuse the create and edit form layout](#2026-11-05---role-details-reuse-the-create-and-edit-form-layout). The create/edit form shape is kept for the name and description; the permissions area is a list rather than tabs.
+
+### Reasoning
+
+Tabs answered "what access does this role have **in this module**". The question a reviewer actually has is "what access does this role have", and a role that varies by module cannot be answered without clicking every tab. The client raised exactly this against showing module names alone: a future Document Manager role with write on Documents and read elsewhere is unreadable unless each module's level is visible at once.
+
+The tab strip was also a measured defect, not only a conceptual one: at eight modules it overflowed its container by 160px (878px of content in a 718px row), clipping the dialog horizontally.
+
+Keeping all three levels visible per row, rather than only the granted one, means the row already has the shape the deferred create/edit story needs — unlocking the radios is the whole change — and it shows the scale a level sits on instead of a bare value.
+
+## 2026-11-05 - A user holds exactly one role
+
+### Decision
+
+The invite and edit user form assigns a single role through a radio group, not several through checkboxes. The users list shows one Role column value per person, and the Roles & Permissions list counts a user once.
+
+This contradicts the written requirement, which asks for multiple roles in five places: [`US-002`](../requirements/05%20User%20Story/PRD-001%20-%20User%20Roles%20&%20Permissions/US-002%20-%20Create%20User.md) AC-02 ("select one or more roles") and AC-04 ("at least one role"), [`US-004`](../requirements/05%20User%20Story/PRD-001%20-%20User%20Roles%20&%20Permissions/US-004%20-%20Edit%20User.md) AC-02, and [`PRD-001`](../requirements/04%20Epics%20-%20PRD/PRD-001%20-%20User%20Roles%20&%20Permissions.md) under the shared invite/edit form. The mockup also used checkboxes. The user confirmed the change with that evidence in front of them; the requirements repository is a separate submodule and was deliberately left unchanged.
+
+### Reasoning
+
+Single assignment removes the question the multi-role model never answered: when two roles cover the same module at different access levels, which one wins. With one role per user the access a person has is exactly the access its role defines, so the permission model stays decidable without a precedence rule that no requirement specifies.
+
+Consequences carried in the same change: the user record holds `role: string` instead of `roles: string[]`, the users table column is **Role** rather than the **Roles** that US-003 AC-01 lists, and the validation message is "Select a role to continue." rather than "at least one role".
+
+## 2026-11-05 - Role details reuse the create and edit form layout
+
+**Status:** The permissions portion is superseded by [Role permissions are read as one list, not one module at a time](#2026-11-05---role-permissions-are-read-as-one-list-not-one-module-at-a-time). The name and description keep the form layout.
+
+### Decision
+
+Present built-in role details in the shape of the mockup's create/edit role form — role name, optional description, module chips, and a permissions tab per module with the three access levels as radios — with every control locked rather than editable.
+
+**Supersedes** [Role detail shows an access matrix instead of a locked form](#2026-11-04---role-detail-shows-an-access-matrix-instead-of-a-locked-form) in full: the Module/Access level table, the removed description, and showing only the granted access levels are all reverted.
+
+### Reasoning
+
+Creating and editing roles is deferred, not cancelled. Building the read-only view in the same shape the editable form will take means the field order, labels and grouping do not have to be relearned when that story lands, and the later work becomes unlocking controls rather than redesigning a screen.
+
+The earlier decision optimised for the read-only case in isolation and was right on its own terms — the matrix is denser and the module tabs never changed on interaction because every built-in role grants one uniform level. That reasoning still holds for viewing alone; it is outweighed by keeping one layout across view and edit once edit is known to be coming.
+
 ## 2026-11-04 - Persistent information uses an information panel
 
 ### Decision
@@ -69,6 +115,8 @@ Mark required fields with a red asterisk after the label and optional fields wit
 Previously only required fields were marked, so an unmarked field could mean optional or could mean the marker was forgotten. Sentences such as "Optional. Choose one or more departments." restated the label and the control instead of adding a rule the user could not infer. The COSS `Input` wrapper signals disabled with `has-disabled:opacity-64` alone, which on a white dialog is indistinguishable from an empty editable field; a changed surface states the condition instead of implying it.
 
 ## 2026-11-04 - Role detail shows an access matrix instead of a locked form
+
+**Status:** Superseded by [Role details reuse the create and edit form layout](#2026-11-05---role-details-reuse-the-create-and-edit-form-layout). The dialog returns to the mockup's form layout with locked controls.
 
 ### Decision
 

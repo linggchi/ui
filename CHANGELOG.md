@@ -2,6 +2,12 @@
 
 This root file is the concise chronological index for notable Accura changes. It does not duplicate rationale. Follow each link to the owning decision or QA record.
 
+## 2026-11-05
+
+- Replaced the per-module permission tabs with one row per module showing all three access levels, and reduced the Roles list to role, description and users assigned. The tab strip hid every module but one and overflowed its container at eight modules. [Decision](docs/change-log/DECISIONS.md#2026-11-05---role-permissions-are-read-as-one-list-not-one-module-at-a-time)
+- Assigned each user exactly one role through a radio group instead of several through checkboxes, renaming the users list column to Role. This diverges from the "one or more roles" written in US-002, US-004 and PRD-001, and was confirmed against that evidence. [Decision](docs/change-log/DECISIONS.md#2026-11-05---a-user-holds-exactly-one-role)
+- Rebuilt the built-in role dialog in the shape of the mockup's create/edit form with locked controls, so the deferred create and edit story inherits the layout. [Decision](docs/change-log/DECISIONS.md#2026-11-05---role-details-reuse-the-create-and-edit-form-layout)
+
 ## 2026-11-04
 
 - Collapsed sidebar items now name themselves on hover and keyboard focus, and the Accura mark reveals the expand icon again by swapping rather than cross-fading, so an icon-only rail no longer has to be expanded to identify an entry or its toggle. [Rule](docs/rules/ui-hierarchy.md#navigation-selection) · [Decision](docs/change-log/DECISIONS.md#2026-11-04---collapsed-navigation-names-itself-on-hover-and-focus)

@@ -27,6 +27,11 @@ Use at most one solid primary action in the same task context. A page and an ope
 - An icon inside a button that also has a visible label stays at the inherited 80% emphasis so it does not compete with the label. An icon-only button has no label, so its icon carries full strength: the icon is the entire affordance.
 - A table row action uses the 28 px icon button, not the 24 px one. At 24 px the target is below a comfortable pointer size and a three-dot glyph renders too small to read as a control.
 
+## Permission and configuration matrices
+
+- When a setting applies per item — an access level per module, a notification per event — show every item in one list with its current value visible. Do not put the items behind tabs: a tab shows one item at a time, so a configuration that varies between items cannot be read without clicking through all of them.
+- Show the available values alongside the chosen one, not the chosen value alone. The reader learns the scale a value sits on, and a read-only view built this way becomes editable by unlocking the control rather than by redesigning the screen.
+
 ## Form fields
 
 - Mark a required field with a red asterisk immediately after the label text. Mark an optional field with a muted "(Optional)" beside the label. Every field in a form carries one marker or the other, so absence is never ambiguous.
