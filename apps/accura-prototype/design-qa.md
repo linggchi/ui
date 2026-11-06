@@ -79,13 +79,6 @@ The implementation now intentionally differs from the older Accura demo and the 
 - Mint is limited to the table header and subtle table hover states; coral remains limited to the unread badge.
 - The official Accura SVG lockup and mark replace the generated raster placeholder.
 - The sidebar collapses from 248 px to exactly 64 px. In the collapsed state the standalone mark remains the sole visual and acts as the expand control.
-
-### Iteration 26 – Read-only role details
-
-- User feedback: Roles & Permissions exposes only View details, so interactive role fields, module switches, and permission radios implied an unavailable Edit capability.
-- Fix: disabled the role name, description, every module switch, and every permission radio; changed the dialog description to state that role editing is unavailable.
-- Layout: kept the full permission labels and placed Read only, Read and write, and Read and write all records on one row for each covered module. Uncovered modules remain visible with disabled off switches and no meaningless access level.
-- Verification: TypeScript and Biome lint pass. Browser semantics report every field, switch, radio group, and radio as disabled; the screenshot confirms the three permission choices remain aligned on one row.
 - The notification count has its own ring and visible overflow, so it no longer clips into the bell control or header edge.
 - The old section label in the top bar is replaced by a functional global search with a visible `⌘ K` shortcut.
 - All product-interface icons now use Iconoir on a consistent 24 × 24 grid and 1.5 px stroke; the Accura logo remains the supplied brand SVG.
@@ -143,6 +136,13 @@ The implementation now intentionally differs from the older Accura demo and the 
 - Changed-file Biome lint (`components/dashboard-screen.tsx`): passed. The current app-wide lint command also scans existing generated `.vercel/output` files and fails there; no diagnostic points to the changed dashboard component.
 
 ## Comparison History
+
+### Iteration 26 – Read-only role details
+
+- User feedback: Roles & Permissions exposes only View details, so interactive role fields, module switches, and permission radios implied an unavailable Edit capability.
+- Fix: disabled the role name, description, every module switch, and every permission radio; changed the dialog description to state that role editing is unavailable.
+- Layout: kept the full permission labels and placed Read only, Read and write, and Read and write all records on one row for each covered module. Uncovered modules remain visible with disabled off switches and no meaningless access level.
+- Verification: TypeScript, production build, and Biome lint pass. Browser semantics report every field, switch, radio group, and radio as disabled; the screenshot confirms the three permission choices remain aligned on one row.
 
 ### Iteration 25 – Persistent information panel
 
