@@ -30,7 +30,10 @@ Use at most one solid primary action in the same task context. A page and an ope
 ## Permission and configuration matrices
 
 - When a setting applies per item — an access level per module, a notification per event — show every item in one list with its current value visible. Do not put the items behind tabs: a tab shows one item at a time, so a configuration that varies between items cannot be read without clicking through all of them.
+- Where an item can be excluded entirely, make inclusion its own control and list every item, included or not. An absent row cannot distinguish "excluded" from "does not exist", and a value shown for an excluded item is meaningless. Reveal the value only once the item is included.
+- A selection label must repeat the wording of the text that explains it. Shortening one of them makes the reader stop to check whether the two mean the same thing.
 - Show the available values alongside the chosen one, not the chosen value alone. The reader learns the scale a value sits on, and a read-only view built this way becomes editable by unlocking the control rather than by redesigning the screen.
+- When the available action is View details and no edit or save path exists, disable every field and selection control in that detail surface. Do not make temporary changes merely to demonstrate a future editing model.
 
 ## Form fields
 

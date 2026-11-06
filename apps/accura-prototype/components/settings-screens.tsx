@@ -53,6 +53,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@coss/ui/components/select";
+import { Switch } from "@coss/ui/components/switch";
 import {
   Table,
   TableBody,
@@ -191,30 +192,23 @@ const userModules = modules.filter(
 const accessLevels: {
   detail: string;
   label: string;
-  // Short form for the per-module row, where all three sit side by side and
-  // the full labels would not fit. The full label and wording stay in the
-  // legend, which is what US-005 AC-03 asks to be shown.
-  short: string;
   value: AccessLevel;
 }[] = [
   {
     detail: "View approved or completed records.",
     label: "Read only",
-    short: "Read",
     value: "read",
   },
   {
     detail:
       "Create new records; view, edit, review, or approve existing records only when owned or assigned to the user.",
     label: "Read and write",
-    short: "Read and write",
     value: "write",
   },
   {
     detail:
       "Create new records; view, edit, review, or approve all existing records regardless of ownership or assignment.",
     label: "Read and write all records",
-    short: "All records",
     value: "write_all",
   },
 ];
@@ -533,32 +527,31 @@ function RoleDetailsDialog({
             <DialogHeader>
               <DialogTitle>{role.name}</DialogTitle>
               <DialogDescription>
-                Built-in role details. Access levels are managed by the system.
+                View the access granted by this built-in role. Role editing is
+                not available.
               </DialogDescription>
             </DialogHeader>
-            {/* Laid out as the create/edit role form from the mockup, with
-                every control locked. Keeping one shape for viewing and for the
-                deferred create/edit story means the field order, labels and
-                grouping do not have to be relearned when that story lands. */}
             <DialogPanel className="flex flex-col gap-5">
               <Field>
                 <FormLabel>Role name</FormLabel>
                 <Input
                   className="has-disabled:bg-[var(--accura-canvas)] has-disabled:opacity-100 has-disabled:*:text-muted-foreground"
+                  defaultValue={role.name}
                   disabled
+                  key={`${role.name}-name`}
                   readOnly
                   type="text"
-                  value={role.name}
                 />
               </Field>
 
               <Field>
                 <FormLabel optional>Description</FormLabel>
                 <Textarea
-                  className="min-h-20 disabled:bg-[var(--accura-canvas)] disabled:text-muted-foreground disabled:opacity-100"
+                  className="min-h-20 has-disabled:bg-[var(--accura-canvas)] has-disabled:opacity-100 has-disabled:*:text-muted-foreground"
+                  defaultValue={role.description}
                   disabled
+                  key={`${role.name}-description`}
                   readOnly
-                  value={role.description}
                 />
               </Field>
 
@@ -567,65 +560,83 @@ function RoleDetailsDialog({
                   Module access
                 </p>
                 <p className="-mt-1 text-muted-foreground text-sm">
-                  Every module the role covers, with the access level it grants.
+                  A switched-on module is included in this role. Switched-off
+                  modules grant no access.
                 </p>
 
-                {/* One row per module with all three levels side by side.
-                    Tabs showed a single module at a time, so a role that
-                    varies by module — write on Documents, read elsewhere —
-                    could not be read without clicking through every tab, and
-                    the tab row overflowed the dialog at eight modules. */}
+                {/* Every module is listed, not only the covered ones: the
+                    switch is what says whether the role reaches that module,
+                    and an absent row would leave "no access" indistinguishable
+                    from "module does not exist". The access level appears only
+                    once the switch is on, because it has no meaning
+                    otherwise. */}
                 <div className="overflow-hidden rounded-xl border">
-                  {role.modules.map((module) => (
-                    <div
-                      className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b px-4 py-3 last:border-b-0"
-                      key={module}
-                    >
-                      <span className="font-medium text-sm">{module}</span>
-                      <RadioGroup
-                        aria-label={`Access level for ${module}`}
-                        className="flex flex-row flex-wrap items-center gap-x-5 gap-y-1"
-                        readOnly
-                        value={role.access[module] ?? ""}
-                      >
-                        {accessLevels.map((level) => {
-                          const granted = role.access[module] === level.value;
-                          return (
-                            <label
-                              className="flex items-center gap-2"
-                              key={level.value}
+                  {modules.map((module) => {
+                    const level = role.modules.includes(module)
+                      ? role.access[module]
+                      : null;
+                    const covered = level !== null;
+                    return (
+                      <div className="border-b last:border-b-0" key={module}>
+                        <div className="flex items-center justify-between gap-4 px-4 py-3">
+                          <span
+                            className={
+                              covered
+                                ? "font-medium text-sm"
+                                : "text-muted-foreground text-sm"
+                            }
+                          >
+                            {module}
+                          </span>
+                          <Switch checked={covered} disabled />
+                        </div>
+
+                        {covered && (
+                          <div className="border-t bg-secondary/40 px-4 py-3">
+                            <RadioGroup
+                              aria-label={`Access level for ${module}`}
+                              className="grid grid-cols-3 gap-4"
+                              disabled
+                              value={level}
                             >
-                              <Radio disabled value={level.value} />
-                              <span
-                                className={
-                                  granted
-                                    ? "font-medium text-sm"
-                                    : "text-muted-foreground text-sm"
-                                }
-                              >
-                                {level.short}
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </RadioGroup>
-                    </div>
-                  ))}
+                              {accessLevels.map((accessLevel) => (
+                                <label
+                                  className="flex items-center gap-2.5"
+                                  key={accessLevel.value}
+                                >
+                                  <Radio disabled value={accessLevel.value} />
+                                  <span
+                                    className={
+                                      level === accessLevel.value
+                                        ? "font-medium text-sm"
+                                        : "text-muted-foreground text-sm"
+                                    }
+                                  >
+                                    {accessLevel.label}
+                                  </span>
+                                </label>
+                              ))}
+                            </RadioGroup>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
 
-                <dl className="flex flex-col gap-1.5 pt-1">
+                <div className="flex flex-col gap-1 pt-1">
                   {accessLevels.map((level) => (
-                    <div
-                      className="grid grid-cols-[150px_minmax(0,1fr)] gap-x-3 max-sm:grid-cols-1"
+                    <p
+                      className="text-muted-foreground text-xs leading-snug"
                       key={level.value}
                     >
-                      <dt className="font-medium text-xs">{level.label}</dt>
-                      <dd className="text-muted-foreground text-xs leading-snug">
-                        {level.detail}
-                      </dd>
-                    </div>
+                      <span className="font-medium text-foreground">
+                        {level.label}
+                      </span>{" "}
+                      – {level.detail}
+                    </p>
                   ))}
-                </dl>
+                </div>
               </div>
             </DialogPanel>
             <DialogFooter>

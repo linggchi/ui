@@ -2,8 +2,14 @@
 
 This root file is the concise chronological index for notable Accura changes. It does not duplicate rationale. Follow each link to the owning decision or QA record.
 
+## 2026-11-06
+
+- Restored Role details to a true read-only view: role fields, module switches, and permission radios are disabled, while the three full permission labels remain visible on one row per covered module. [Decision](docs/change-log/DECISIONS.md#2026-11-06---role-details-are-read-only) · [QA evidence](apps/accura-prototype/design-qa.md#iteration-26--read-only-role-details)
+
 ## 2026-11-05
 
+- Made the role dialog interactive — switches, access levels, name and description — with a subtitle stating that changes are not saved, and put each access level explanation on one inline line. [Decision](docs/change-log/DECISIONS.md#2026-11-05---role-details-are-live-not-locked)
+- Modelled module coverage as a switch per module in role details, revealing the three access levels only once a module is switched on, with selection labels matching the legend. [Decision](docs/change-log/DECISIONS.md#2026-11-05---module-coverage-is-a-switch-the-access-level-sits-under-it)
 - Replaced the per-module permission tabs with one row per module showing all three access levels, and reduced the Roles list to role, description and users assigned. The tab strip hid every module but one and overflowed its container at eight modules. [Decision](docs/change-log/DECISIONS.md#2026-11-05---role-permissions-are-read-as-one-list-not-one-module-at-a-time)
 - Assigned each user exactly one role through a radio group instead of several through checkboxes, renaming the users list column to Role. This diverges from the "one or more roles" written in US-002, US-004 and PRD-001, and was confirmed against that evidence. [Decision](docs/change-log/DECISIONS.md#2026-11-05---a-user-holds-exactly-one-role)
 - Rebuilt the built-in role dialog in the shape of the mockup's create/edit form with locked controls, so the deferred create and edit story inherits the layout. [Decision](docs/change-log/DECISIONS.md#2026-11-05---role-details-reuse-the-create-and-edit-form-layout)

@@ -2,7 +2,59 @@
 
 This is the canonical history of Accura product, design-system, and prototype decisions. It records why a direction was chosen and preserves superseded directions. Current product facts live in `docs/product-knowledge/`; current rules live in `docs/rules/`; implemented changes are indexed in root `CHANGELOG.md`.
 
+## 2026-11-06 - Role details are read-only
+
+### Decision
+
+Role details is a view-only surface. Disable the role name, description, module switches, and permission radios instead of allowing temporary edits. Keep every module visible, show no permission level for an uncovered module, and show the three full permission labels — Read only, Read and write, and Read and write all records — on one row for every covered module.
+
+**Supersedes** [Role details are live, not locked](#2026-11-05---role-details-are-live-not-locked). The module coverage model and full permission wording remain current.
+
+### Reasoning
+
+The Roles & Permissions list exposes only View details; there is no Edit action and no save path. Interactive controls therefore imply an editing capability the product does not provide, even when the dialog explains that changes will be discarded. Disabled controls preserve the future create/edit form shape while accurately communicating the current capability. Keeping the three levels on one row makes the selected level and the available scale readable without adding vertical scanning inside each module.
+
+## 2026-11-05 - Role details are live, not locked
+
+**Status:** Superseded by [Role details are read-only](#2026-11-06---role-details-are-read-only). The current View details surface disables every field and permission control.
+
+### Decision
+
+Every control in the role dialog is interactive: the module switches, the access level radios, the role name and the description. Switching a module on defaults it to Read only. Nothing is persisted — the draft is seeded from the role each time the dialog opens, and closing discards it. The dialog subtitle says so.
+
+Access level wording appears once per legend entry as a single inline line, label and explanation together, instead of a two-column grid.
+
+**Supersedes** the locked-control part of [Module coverage is a switch, the access level sits under it](#2026-11-05---module-coverage-is-a-switch-the-access-level-sits-under-it) and of [Role details reuse the create and edit form layout](#2026-11-05---role-details-reuse-the-create-and-edit-form-layout).
+
+### Reasoning
+
+A locked form can be reviewed but not tried. The questions that matter about this model — what happens to the access level when a module is switched off, what a newly covered module should default to, whether the three levels read correctly in sequence — are only answerable by operating the controls. Making them live turns the prototype into something that can be used to settle the create/edit story rather than only illustrate it.
+
+The risk is a reviewer believing their edits were saved, so the subtitle states plainly that they are not. Persisting them would mean building create and edit, which is still out of scope in PRD-001.
+
+A new module defaults to Read only because granting the least privilege is the only safe default; defaulting to write would hand out access nobody chose.
+
+## 2026-11-05 - Module coverage is a switch, the access level sits under it
+
+**Status:** The switch and level model stands. The controls are disabled in the current View details surface under [Role details are read-only](#2026-11-06---role-details-are-read-only).
+
+### Decision
+
+In role details, list every module in the system with a switch. The switch says whether the role covers that module at all; a module switched off grants no access and shows no access level. Switching a module on reveals the three access levels beneath it, labelled exactly as the legend labels them.
+
+**Supersedes** [Role permissions are read as one list, not one module at a time](#2026-11-05---role-permissions-are-read-as-one-list-not-one-module-at-a-time), which listed only covered modules and put the three levels on one line.
+
+### Reasoning
+
+The earlier list encoded the wrong model. It showed only the modules a role covers, which left no way to tell "this role has no access to Settings" apart from "Settings is not a module", and it implied access is always one of three levels when in fact the first question is whether the role reaches the module at all. Coverage and level are two decisions, and the switch makes the first one visible before the second.
+
+Showing an access level for an uncovered module would also be meaningless: there is no level that means "none", so the control only appears once coverage is on.
+
+The level labels now repeat the legend wording exactly — "Read only", "Read and write", "Read and write all records" — rather than the shortened forms the single-line layout needed. A selection label that differs from the label explaining it makes the reader check whether they are the same thing.
+
 ## 2026-11-05 - Role permissions are read as one list, not one module at a time
+
+**Status:** Superseded by [Module coverage is a switch, the access level sits under it](#2026-11-05---module-coverage-is-a-switch-the-access-level-sits-under-it). Every module is listed with a switch, and the level appears only when the switch is on.
 
 ### Decision
 
