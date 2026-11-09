@@ -8,6 +8,14 @@
       "cwd": "apps/accura-prototype",
       "url": "http://localhost:4173",
       "port": 4173
+    },
+    {
+      "name": "accura-catalogue",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "-p", "4174"],
+      "cwd": "apps/accura-catalogue",
+      "url": "http://localhost:4174",
+      "port": 4174
     }
   ]
 }

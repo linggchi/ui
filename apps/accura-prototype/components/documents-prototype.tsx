@@ -90,10 +90,19 @@ import { SettingsScreen } from "./settings-screens";
 
 type AppModule = "dashboard" | "documents" | "settings";
 
-type DocumentStatus = "Approved" | "Draft" | "In QA Approval" | "In Review";
+type DocumentStatus =
+  | "Approved"
+  | "Draft"
+  | "In Approval"
+  | "In Review"
+  | "Obsolete"
+  | "Superseded";
+
+type DocumentCategory = "Controlled" | "External";
 
 type DocumentRecord = {
   author: string;
+  category: DocumentCategory;
   department:
     | "Engineering"
     | "Manufacturing"
@@ -105,6 +114,7 @@ type DocumentRecord = {
   status: DocumentStatus;
   type:
     | "Batch Record"
+    | "External"
     | "Form"
     | "Policy"
     | "Procedure"
@@ -119,6 +129,7 @@ const documentsOnly = process.env.NEXT_PUBLIC_ACCURA_DOCUMENTS_ONLY === "true";
 const documents: DocumentRecord[] = [
   {
     author: "Amit Kothari",
+    category: "Controlled",
     department: "Quality Control",
     effectiveDate: null,
     id: "ACME-BR-2026-000001",
@@ -129,16 +140,18 @@ const documents: DocumentRecord[] = [
   },
   {
     author: "Amit Kothari",
+    category: "Controlled",
     department: "Quality Control",
     effectiveDate: null,
     id: "ACME-WI-2026-000013",
     name: "Equipment Cleaning Work Instruction",
-    status: "In QA Approval",
+    status: "In Approval",
     type: "Work Instruction",
     version: "v1.0",
   },
   {
     author: "Amit Kothari",
+    category: "Controlled",
     department: "Quality Control",
     effectiveDate: "13 Oct 2026",
     id: "ACME-FRM-2026-000006",
@@ -149,6 +162,7 @@ const documents: DocumentRecord[] = [
   },
   {
     author: "Amit Kothari",
+    category: "Controlled",
     department: "Quality Assurance",
     effectiveDate: null,
     id: "ACME-FRM-2026-000005",
@@ -158,7 +172,19 @@ const documents: DocumentRecord[] = [
     version: "v2.0",
   },
   {
+    author: "Amit Kothari",
+    category: "Controlled",
+    department: "Quality Assurance",
+    effectiveDate: "2 Aug 2025",
+    id: "ACME-FRM-2026-000005",
+    name: "Document Review and Approval Form",
+    status: "Superseded",
+    type: "Form",
+    version: "v1.0",
+  },
+  {
     author: "Nina Patel",
+    category: "Controlled",
     department: "Quality Assurance",
     effectiveDate: "11 Oct 2026",
     id: "ACME-SPEC-2026-000004",
@@ -169,6 +195,7 @@ const documents: DocumentRecord[] = [
   },
   {
     author: "Daniel Lee",
+    category: "Controlled",
     department: "Engineering",
     effectiveDate: null,
     id: "ACME-PRO-2026-000001",
@@ -179,6 +206,7 @@ const documents: DocumentRecord[] = [
   },
   {
     author: "Nina Patel",
+    category: "Controlled",
     department: "Quality Control",
     effectiveDate: "9 Oct 2026",
     id: "ACME-FRM-2026-000011",
@@ -189,6 +217,7 @@ const documents: DocumentRecord[] = [
   },
   {
     author: "Daniel Lee",
+    category: "Controlled",
     department: "Engineering",
     effectiveDate: "5 Oct 2026",
     id: "ACME-PRO-2026-000008",
@@ -199,6 +228,7 @@ const documents: DocumentRecord[] = [
   },
   {
     author: "Chau Nguyen",
+    category: "Controlled",
     department: "Engineering",
     effectiveDate: null,
     id: "ACME-POL-2026-000004",
@@ -209,6 +239,7 @@ const documents: DocumentRecord[] = [
   },
   {
     author: "Nina Patel",
+    category: "Controlled",
     department: "Manufacturing",
     effectiveDate: "4 Oct 2026",
     id: "ACME-SOP-2026-000016",
@@ -219,6 +250,7 @@ const documents: DocumentRecord[] = [
   },
   {
     author: "Daniel Lee",
+    category: "Controlled",
     department: "Manufacturing",
     effectiveDate: null,
     id: "ACME-WI-2026-000019",
@@ -229,16 +261,18 @@ const documents: DocumentRecord[] = [
   },
   {
     author: "Chau Nguyen",
+    category: "Controlled",
     department: "Quality Assurance",
     effectiveDate: null,
     id: "ACME-SOP-2026-000021",
     name: "Controlled Document Lifecycle",
-    status: "In QA Approval",
+    status: "In Approval",
     type: "SOP",
     version: "v1.0",
   },
   {
     author: "Nina Patel",
+    category: "Controlled",
     department: "Quality Control",
     effectiveDate: "30 Sep 2026",
     id: "ACME-SPEC-2026-000010",
@@ -248,7 +282,19 @@ const documents: DocumentRecord[] = [
     version: "v3.0",
   },
   {
+    author: "Nina Patel",
+    category: "Controlled",
+    department: "Quality Control",
+    effectiveDate: "18 Mar 2025",
+    id: "ACME-SPEC-2026-000010",
+    name: "Environmental Monitoring Limits",
+    status: "Superseded",
+    type: "Specification",
+    version: "v2.0",
+  },
+  {
     author: "Amit Kothari",
+    category: "Controlled",
     department: "Manufacturing",
     effectiveDate: null,
     id: "ACME-BR-2026-000014",
@@ -259,6 +305,7 @@ const documents: DocumentRecord[] = [
   },
   {
     author: "Daniel Lee",
+    category: "Controlled",
     department: "Engineering",
     effectiveDate: "28 Sep 2026",
     id: "ACME-SOP-2026-000018",
@@ -269,6 +316,7 @@ const documents: DocumentRecord[] = [
   },
   {
     author: "Chau Nguyen",
+    category: "Controlled",
     department: "Quality Assurance",
     effectiveDate: null,
     id: "ACME-POL-2026-000009",
@@ -279,6 +327,7 @@ const documents: DocumentRecord[] = [
   },
   {
     author: "Nina Patel",
+    category: "Controlled",
     department: "Quality Control",
     effectiveDate: "24 Sep 2026",
     id: "ACME-WI-2026-000025",
@@ -289,12 +338,57 @@ const documents: DocumentRecord[] = [
   },
   {
     author: "Amit Kothari",
+    category: "Controlled",
     department: "Quality Assurance",
     effectiveDate: null,
     id: "ACME-FRM-2026-000027",
     name: "Change Impact Assessment",
     status: "Draft",
     type: "Form",
+    version: "v1.0",
+  },
+  {
+    author: "Chau Nguyen",
+    category: "Controlled",
+    department: "Manufacturing",
+    effectiveDate: "14 Jan 2024",
+    id: "ACME-SOP-2024-000002",
+    name: "Legacy Gowning and Aseptic Technique",
+    status: "Obsolete",
+    type: "SOP",
+    version: "v1.0",
+  },
+  {
+    author: "Nina Patel",
+    category: "External",
+    department: "Quality Assurance",
+    effectiveDate: "1 Oct 2026",
+    id: "ACME-EXT-2026-000003",
+    name: "ISO 13485:2016 — Medical Devices QMS",
+    status: "Approved",
+    type: "External",
+    version: "v1.0",
+  },
+  {
+    author: "Amit Kothari",
+    category: "External",
+    department: "Quality Control",
+    effectiveDate: "22 Sep 2026",
+    id: "ACME-EXT-2026-000007",
+    name: "Supplier Certificate of Analysis — Reagent Lot 88421",
+    status: "Approved",
+    type: "External",
+    version: "v1.0",
+  },
+  {
+    author: "Nina Patel",
+    category: "External",
+    department: "Quality Assurance",
+    effectiveDate: "12 Sep 2026",
+    id: "ACME-EXT-2026-000012",
+    name: "FDA 21 CFR Part 11 — Electronic Records Guidance",
+    status: "Approved",
+    type: "External",
     version: "v1.0",
   },
 ];
@@ -326,8 +420,10 @@ const statusOptions = [
   { label: "All statuses", value: "all" },
   { label: "Draft", value: "Draft" },
   { label: "In Review", value: "In Review" },
-  { label: "In QA Approval", value: "In QA Approval" },
+  { label: "In Approval", value: "In Approval" },
   { label: "Approved", value: "Approved" },
+  { label: "Superseded", value: "Superseded" },
+  { label: "Obsolete", value: "Obsolete" },
 ];
 
 const typeOptions = [
@@ -346,17 +442,25 @@ const departmentOptions = [
 
 const pageSizeOptions = [
   { label: "10", value: "10" },
-  { label: "15", value: "15" },
   { label: "20", value: "20" },
+  { label: "50", value: "50" },
 ];
 
 function StatusBadge({ status }: { status: DocumentStatus }) {
   const variant = {
     Approved: "success",
     Draft: "secondary",
-    "In QA Approval": "info",
+    "In Approval": "info",
     "In Review": "warning",
-  }[status] as "info" | "secondary" | "success" | "warning";
+    Obsolete: "error",
+    Superseded: "outline",
+  }[status] as
+    | "error"
+    | "info"
+    | "outline"
+    | "secondary"
+    | "success"
+    | "warning";
 
   return (
     <Badge size="lg" variant={variant}>
@@ -580,9 +684,31 @@ export function DocumentsPrototype() {
     });
   }, [department, query, status, type]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredDocuments.length / pageSize));
+  // Each row is one saved version. Keep versions of the same Document ID
+  // consecutive (US-006 AC-01), newest version first within each family,
+  // without disturbing the order in which the document families appear.
+  const orderedDocuments = useMemo(() => {
+    const order: string[] = [];
+    const families = new Map<string, DocumentRecord[]>();
+    for (const document of filteredDocuments) {
+      const family = families.get(document.id);
+      if (family) {
+        family.push(document);
+      } else {
+        families.set(document.id, [document]);
+        order.push(document.id);
+      }
+    }
+    return order.flatMap((id) =>
+      [...(families.get(id) ?? [])].sort((a, b) =>
+        b.version.localeCompare(a.version, undefined, { numeric: true }),
+      ),
+    );
+  }, [filteredDocuments]);
+
+  const pageCount = Math.max(1, Math.ceil(orderedDocuments.length / pageSize));
   const safePage = Math.min(page, pageCount);
-  const visibleDocuments = filteredDocuments.slice(
+  const visibleDocuments = orderedDocuments.slice(
     (safePage - 1) * pageSize,
     safePage * pageSize,
   );
@@ -609,9 +735,9 @@ export function DocumentsPrototype() {
   const openDocument = (document: DocumentRecord) => {
     setActiveModule("documents");
     if (document.status === "Draft") navigateToView("draft");
-    if (document.status === "In Review") navigateToView("review");
-    if (document.status === "In QA Approval") navigateToView("qa");
-    if (document.status === "Approved") navigateToView("approved");
+    else if (document.status === "In Review") navigateToView("review");
+    else if (document.status === "In Approval") navigateToView("qa");
+    else navigateToView("approved");
     setSelectedDocument(null);
   };
 
@@ -903,25 +1029,31 @@ export function DocumentsPrototype() {
                 <Table>
                   <TableHeader className="bg-secondary/72">
                     <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-[220px] ps-4 text-xs">
+                      <TableHead className="w-[200px] ps-4 text-xs">
                         Document ID
                       </TableHead>
-                      <TableHead className="min-w-[300px] text-xs">
+                      <TableHead className="min-w-[260px] text-xs">
                         Name
                       </TableHead>
-                      <TableHead className="w-[148px] text-xs">
+                      <TableHead className="w-[132px] text-xs">
                         Status
                       </TableHead>
-                      <TableHead className="w-[112px] text-xs max-[1180px]:hidden">
+                      <TableHead className="w-[96px] text-xs max-[1240px]:hidden">
                         Version
                       </TableHead>
-                      <TableHead className="w-[180px] text-xs max-[1320px]:hidden">
+                      <TableHead className="w-[124px] text-xs max-[920px]:hidden">
+                        Category
+                      </TableHead>
+                      <TableHead className="w-[150px] text-xs max-[1120px]:hidden">
+                        Document type
+                      </TableHead>
+                      <TableHead className="w-[170px] text-xs max-[1380px]:hidden">
                         Department
                       </TableHead>
-                      <TableHead className="w-[150px] text-xs max-[1460px]:hidden">
+                      <TableHead className="w-[150px] text-xs max-[1520px]:hidden">
                         Author
                       </TableHead>
-                      <TableHead className="w-[140px] text-xs max-[1180px]:hidden">
+                      <TableHead className="w-[140px] text-xs max-[1240px]:hidden">
                         Effective date
                       </TableHead>
                       <TableHead className="w-12 pe-3 text-right text-xs">
@@ -949,28 +1081,32 @@ export function DocumentsPrototype() {
                             >
                               {document.name}
                             </button>
-                            <p className="mt-1 text-muted-foreground text-xs lg:hidden">
-                              {document.department} · {document.version}
+                            <p className="mt-1 text-muted-foreground text-xs min-[920px]:hidden">
+                              {document.category} · {document.type} ·{" "}
+                              {document.version}
                             </p>
                           </TableCell>
                           <TableCell>
                             <StatusBadge status={document.status} />
                           </TableCell>
-                          <TableCell className="max-[1180px]:hidden">
+                          <TableCell className="max-[1240px]:hidden">
                             <span className="identifier">
                               {document.version}
                             </span>
-                            <p className="mt-1 text-muted-foreground text-xs">
-                              Current version
-                            </p>
                           </TableCell>
-                          <TableCell className="max-[1320px]:hidden">
+                          <TableCell className="max-[920px]:hidden">
+                            <Badge variant="outline">{document.category}</Badge>
+                          </TableCell>
+                          <TableCell className="max-[1120px]:hidden">
+                            {document.type}
+                          </TableCell>
+                          <TableCell className="max-[1380px]:hidden">
                             {document.department}
                           </TableCell>
-                          <TableCell className="max-[1460px]:hidden">
+                          <TableCell className="max-[1520px]:hidden">
                             {document.author}
                           </TableCell>
-                          <TableCell className="max-[1180px]:hidden">
+                          <TableCell className="max-[1240px]:hidden">
                             {document.effectiveDate ?? "—"}
                           </TableCell>
                           <TableCell className="pe-3 text-right">
@@ -1009,7 +1145,7 @@ export function DocumentsPrototype() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell className="h-64 text-center" colSpan={8}>
+                        <TableCell className="h-64 text-center" colSpan={10}>
                           <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
                             <div className="flex size-10 items-center justify-center rounded-full bg-muted">
                               <FileSearchIcon
@@ -1148,6 +1284,10 @@ export function DocumentsPrototype() {
               </DialogHeader>
               <DialogPanel>
                 <dl className="grid grid-cols-2 gap-x-6 gap-y-5 text-sm">
+                  <div className="flex flex-col gap-1">
+                    <dt className="text-muted-foreground">Category</dt>
+                    <dd className="font-medium">{selectedDocument.category}</dd>
+                  </div>
                   <div className="flex flex-col gap-1">
                     <dt className="text-muted-foreground">Document type</dt>
                     <dd className="font-medium">{selectedDocument.type}</dd>

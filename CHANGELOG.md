@@ -2,6 +2,11 @@
 
 This root file is the concise chronological index for notable Accura changes. It does not duplicate rationale. Follow each link to the owning decision or QA record.
 
+## 2026-11-09
+
+- Added `apps/accura-catalogue`, a standalone Next.js app (own Vercel project, dev port 4174) that presents the design system as a Patterns & Behavior catalogue: a card grid across Foundations, Shell & Navigation, Components, Patterns, and Behaviors, a left nav marking each entry Ready (✅) or Needs sign-off (🟡), and a detail drawer with rules, where it is applied, consistency, and sources. Content is derived from [`docs/rules/`](docs/rules/), [`DECISIONS.md`](docs/change-log/DECISIONS.md), and [`apps/accura-prototype/design-qa.md`](apps/accura-prototype/design-qa.md); it links to those owners rather than duplicating them. [Repository map](ACCURA.md#repository-map-and-ownership)
+- Aligned the Documents list to [[US-006 - View Document List]]: added Document Category and Document Type columns, the full status set (Draft, In Review, In Approval, Approved, Superseded, Obsolete), 10/20/50 page sizes, and consecutive grouping of versions sharing a Document ID. Renamed "In QA Approval" to "In Approval" across the flow screens (PRD-002 defines no separate QA role; electronic signature is deferred). [Prototype](apps/accura-prototype/components/documents-prototype.tsx)
+
 ## 2026-11-06
 
 - Restored Role details to a true read-only view: role fields, module switches, and permission radios are disabled, the three full permission labels remain visible on one row per covered module, and every module name keeps the same text emphasis whether coverage is on or off. [Decision](docs/change-log/DECISIONS.md#2026-11-06---role-details-are-read-only) · [QA evidence](apps/accura-prototype/design-qa.md#iteration-27--consistent-module-labels)

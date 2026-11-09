@@ -26,6 +26,7 @@ Before working on Accura, read these files in order:
 3. The applicable rule files under [`docs/rules/`](docs/rules/).
 4. The latest relevant entries in [`CHANGELOG.md`](CHANGELOG.md).
 5. The relevant rationale in [`docs/change-log/DECISIONS.md`](docs/change-log/DECISIONS.md).
+6. The current operational state — what is in progress, uncommitted, or still open — in [`docs/agent-worklog.md`](docs/agent-worklog.md). Update it before finishing a session.
 
 Do not duplicate product facts, rules, decisions, or implementation QA across files. Update the owning source and link to it from indexes or evidence files.
 

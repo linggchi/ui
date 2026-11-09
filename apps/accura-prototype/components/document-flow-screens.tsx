@@ -66,7 +66,7 @@ type DocumentFlowScreenProps = {
 const workflowSteps = [
   { key: "draft", label: "Draft" },
   { key: "review", label: "In Review" },
-  { key: "qa", label: "In QA Approval" },
+  { key: "qa", label: "In Approval" },
   { key: "approved", label: "Approved" },
 ] as const;
 
@@ -81,7 +81,7 @@ const stageIndex: Record<DocumentFlowView, number> = {
 function statusForView(view: DocumentFlowView) {
   if (view === "create" || view === "draft") return "Draft";
   if (view === "review") return "In Review";
-  if (view === "qa") return "In QA Approval";
+  if (view === "qa") return "In Approval";
   return "Approved";
 }
 
@@ -212,7 +212,7 @@ function SignatureDialog({
                 ? "Review rejection"
                 : action === "submit"
                   ? "Document author"
-                  : "Quality approver"}
+                  : "Approver"}
             </p>
             <p className="mt-1 text-muted-foreground">
               Meaning: I confirm this decision is accurate and attributable to
@@ -266,14 +266,10 @@ function AuditDrawer({
   onOpenChange: (open: boolean) => void;
 }) {
   const events = [
-    [
-      "QA approved and signed",
-      "In QA Approval → Approved",
-      "3 Nov 2026, 10:42 AM",
-    ],
+    ["Approved and signed", "In Approval → Approved", "3 Nov 2026, 10:42 AM"],
     [
       "Review approved and signed",
-      "In Review → In QA Approval",
+      "In Review → In Approval",
       "2 Nov 2026, 4:18 PM",
     ],
     ["Submitted for review", "Draft → In Review", "2 Nov 2026, 9:05 AM"],
@@ -564,11 +560,7 @@ function EditorScreen({
               label="Amit Kothari"
               roleLabel="Technical reviewer"
             />
-            <Assignee
-              initials="NP"
-              label="Nina Patel"
-              roleLabel="QA approver"
-            />
+            <Assignee initials="NP" label="Nina Patel" roleLabel="Approver" />
           </section>
         </aside>
       </div>
@@ -706,7 +698,7 @@ function DetailScreen({
           </span>
           <div>
             <p className="font-medium text-sm">
-              Your {view === "review" ? "technical review" : "QA approval"} is
+              Your {view === "review" ? "technical review" : "approval"} is
               required
             </p>
             <p className="text-muted-foreground text-xs">
@@ -807,7 +799,7 @@ function DetailScreen({
                     className="mt-0.5 size-4 shrink-0 text-primary"
                   />
                   <div>
-                    <p className="font-medium text-sm">QA signature</p>
+                    <p className="font-medium text-sm">Approval signature</p>
                     <p className="text-muted-foreground text-xs">
                       Nina Patel · 3 Nov 2026, 10:42 AM
                     </p>
@@ -822,7 +814,7 @@ function DetailScreen({
       {!isApproved && (
         <footer className="sticky bottom-2 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-lg/8">
           <p className="text-muted-foreground text-sm">
-            Awaiting {view === "review" ? "review" : "QA approval"} by{" "}
+            Awaiting {view === "review" ? "review" : "approval"} by{" "}
             {view === "review" ? "Amit Kothari" : "Nina Patel"}.
           </p>
           <div className="flex items-center gap-2">

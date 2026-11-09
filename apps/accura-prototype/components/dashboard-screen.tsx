@@ -20,7 +20,6 @@ import {
 import {
   CheckCircle as CheckCircleIcon,
   ClipboardCheck as ClipboardCheckIcon,
-  Clock as ClockIcon,
   Eye as EyeIcon,
   MultiplePages as FilesIcon,
   GraduationCap as GraduationCapIcon,
@@ -197,33 +196,9 @@ export function DashboardScreen({ onOpenDocuments }: DashboardScreenProps) {
     [activeTab, priority],
   );
 
-  const reviewActions = () => {
-    setActiveTab("actions");
-    setPriority("all");
-    recordsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <p className="font-medium text-muted-foreground text-sm">
-            Tuesday, 3 November 2026
-          </p>
-          <h1 className="font-bold text-2xl leading-tight">
-            Good morning, a Tùng đẹp trai
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Here’s what needs your attention across Accura today.
-          </p>
-        </div>
-        <Button onClick={reviewActions} variant="outline">
-          <ClockIcon aria-hidden="true" />
-          Review my actions
-        </Button>
-      </div>
-
-      <section className="relative flex min-h-52 items-center overflow-hidden rounded-2xl border border-[var(--accura-brand-300)] bg-secondary px-6 py-8 shadow-sm sm:px-8">
+      <section className="relative flex h-[147px] items-center overflow-hidden rounded-2xl px-6 sm:px-10">
         <Image
           alt=""
           aria-hidden="true"
@@ -231,15 +206,23 @@ export function DashboardScreen({ onOpenDocuments }: DashboardScreenProps) {
           fill
           priority
           sizes="(max-width: 1600px) 100vw, 1600px"
-          src="/brand/quality-workspace-banner.png"
+          src="/brand/dashboard-banner.png"
         />
-        <div className="relative z-1 flex max-w-[68%] flex-col gap-2 sm:max-w-xl">
-          <p className="font-medium text-primary text-xs uppercase">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-2xl border border-[#D2F042]"
+        />
+
+        <div className="relative z-1 flex flex-col gap-1">
+          <p className="font-medium text-[0.72rem] text-[var(--accura-brand-950-darkshade)]/70 uppercase tracking-[0.14em]">
             Your quality workspace
           </p>
-          <h2 className="font-bold text-3xl text-[var(--accura-brand-950-darkshade)] leading-[1.08] sm:text-4xl">
-            Keep quality moving, without losing sight of risk.
-          </h2>
+          <h1 className="font-bold text-2xl text-[var(--accura-brand-950-darkshade)] leading-tight sm:text-3xl">
+            Good morning, a Tùng đẹp trai
+          </h1>
+          <p className="font-medium text-[var(--accura-brand-950-darkshade)]/75 text-sm">
+            Tuesday, 3 November 2026
+          </p>
         </div>
       </section>
 

@@ -25,6 +25,7 @@ Read these sources in order:
 | `CHANGELOG.md` | Short chronological index of notable repository and prototype changes | Detailed rationale; entries link to the canonical detail |
 | `brand-assets/` | Accura token inputs, mapping contract, generator, and generated CSS | General UI rules or product requirements |
 | `apps/accura-prototype/` | Executable Accura prototype and its implementation QA evidence | Product knowledge or cross-project design rules |
+| `apps/accura-catalogue/` | Patterns & Behavior catalogue app that visualizes settled design-system elements with their rules, usage, and readiness status | The source of truth for any rule (links to `docs/rules/` instead); product requirements |
 | `packages/ui/` | Reusable COSS component implementation consumed by apps | Accura-specific product behavior |
 | `apps/ui/` | COSS documentation, registry, particles, and component development environment | Accura prototype decisions |
 | `apps/origin/` | Legacy Origin UI reference | New Accura foundation |
