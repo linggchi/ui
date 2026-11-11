@@ -276,6 +276,7 @@ export const entries: CatalogueEntry[] = [
       "The table sits behind a border-t, with the Zinc 50 header row.",
       "The row action is a “…” menu, never a bare icon button — so a second action can be added without redesigning the column.",
       "An identifier and a name are two columns, never stacked in one cell: stacked, neither can be scanned down the page.",
+      "A setting screen owns the value the modules read: one module (components/organisation-settings.ts) holds it, Settings edits it, and the feature reads it. A hard-coded twin in the consuming screen is the drift to avoid.",
       "The identifier carries the register's link treatment — Brand 900, underline on hover — wherever it appears.",
       "Status and priority badges use the 8% semantic tints, the same as the register.",
     ],
@@ -390,6 +391,8 @@ export const entries: CatalogueEntry[] = [
     id: "form-fields",
     rules: [
       "Every field marks required (red *) or optional (muted “(Optional)”).",
+      "Buttons and menu items are sentence case; the only later capitals are proper nouns — module names, role names and PRD-002's defined terms.",
+      "A Save button is disabled until its section changes, and says the verb only — the card heading above it already names the section.",
       "No helper text that only repeats the label or control.",
       "Disabled control changes surface (Zinc 100 recessed), not only opacity.",
       "A system-filled field is disabled with RECESSED_INPUT, not readOnly — readOnly renders as an ordinary editable field.",

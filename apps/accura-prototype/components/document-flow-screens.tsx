@@ -87,11 +87,15 @@ import {
   SectionCard,
   SectionHeading,
 } from "@/components/accura-form";
-import { departments, people } from "@/components/document-directory";
+import { people } from "@/components/document-directory";
 import {
   type DocumentStatusName,
   statusBadgeLook,
 } from "@/components/document-status";
+import {
+  type DocumentTypeSetting,
+  frequencyForType,
+} from "@/components/organisation-settings";
 import {
   canManage,
   type ProtoRole,
@@ -184,7 +188,6 @@ export type DocumentSummary = {
  * type without its own value uses three years. That screen is not built, so
  * the prototype has only the default to read.
  */
-const DEFAULT_REVIEW_YEARS = 3;
 
 /**
  * `US-013` AC-02: an approved Controlled Document becomes effective 10 days
@@ -227,11 +230,18 @@ const formatDate = (date: Date) =>
  * document is Overdue for Periodic Review — a displayed state only, which
  * AC-06 and AC-07 are explicit does not change Approved or Effective.
  */
-function periodicReview(document: DocumentSummary) {
+function periodicReview(
+  document: DocumentSummary,
+  documentTypes: DocumentTypeSetting[],
+) {
   const approved = approvalDateOf(document);
   if (!approved) return { label: "Set after approval", overdue: false };
   const due = new Date(approved);
-  due.setFullYear(due.getFullYear() + DEFAULT_REVIEW_YEARS);
+  // US-007 (PRD-001) AC-04: the frequency configured for this document's type
+  // in Settings > Documents, which was a hard-coded 3 until 2026-11-11.
+  due.setFullYear(
+    due.getFullYear() + frequencyForType(documentTypes, document.type),
+  );
   return { label: formatDate(due), overdue: due.getTime() < Date.now() };
 }
 
@@ -344,7 +354,10 @@ const initialsOf = (name: string) =>
 type DocumentFlowScreenProps = {
   /** Every document that could be linked, for `US-014` AC-02's references. */
   candidates: ReferenceCandidate[];
+  departments: string[];
   document: DocumentSummary;
+  /** Settings > Documents, for this document type's review frequency. */
+  documentTypes: DocumentTypeSetting[];
   /** `US-013` AC-02: approve, and set the Effective Date 10 days out. */
   onApprove: (effectiveDate: string) => void;
   onBack: () => void;
@@ -918,6 +931,7 @@ function AuditDrawer({
 function EditorScreen({
   canEdit,
   candidates,
+  departments,
   document,
   onBack,
   onPatch,
@@ -927,6 +941,7 @@ function EditorScreen({
 }: {
   canEdit: boolean;
   candidates: ReferenceCandidate[];
+  departments: string[];
   document: DocumentSummary;
   onBack: () => void;
   onNotice: (message: string) => void;
@@ -954,6 +969,11 @@ function EditorScreen({
   // US-014 AC-02: a Draft carries a primary file. The prototype stores no
   // bytes, so this records only whether one is present.
   const [primaryFile, setPrimaryFile] = useState(true);
+  // US-009: the list comes from Settings > Organisation > Departments.
+  const departmentOptions = departments.map((value) => ({
+    label: value,
+    value,
+  }));
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [leaveOpen, setLeaveOpen] = useState(false);
@@ -1583,11 +1603,6 @@ function EditorScreen({
   );
 }
 
-const departmentOptions = departments.map((value) => ({
-  label: value,
-  value,
-}));
-
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 200;
 const ZOOM_STEP = 25;
@@ -1716,6 +1731,7 @@ function ReferenceList({
 
 function DetailScreen({
   document,
+  documentTypes,
   onAudit,
   onBack,
   onDecision,
@@ -1734,6 +1750,7 @@ function DetailScreen({
   onDecision: (action: Exclude<DecisionAction, null>) => void;
   onDownload: (kind: string) => void;
   onNewVersion: () => void;
+  documentTypes: DocumentTypeSetting[];
   onObsolete: () => void;
   onOpenReference: (reference: DocumentReference) => void;
   onPrint: () => void;
@@ -1744,7 +1761,7 @@ function DetailScreen({
   const isApproved = view === "approved";
   const isExternal = document.category === "External";
   const isClosed = view === "superseded" || view === "obsolete";
-  const review = periodicReview(document);
+  const review = periodicReview(document, documentTypes);
   // US-011 AC-02: Print is enabled only for Approved, Superseded, or Obsolete.
   const canPrint = isApproved || isClosed;
   // US-011 AC-07: an External Document carries no review or approval progress,
@@ -2242,7 +2259,9 @@ function DetailScreen({
 
 export function DocumentFlowScreen({
   candidates,
+  departments,
   document,
+  documentTypes,
   onApprove,
   onBack,
   onCreateRevision,
@@ -2350,6 +2369,7 @@ export function DocumentFlowScreen({
         <EditorScreen
           canEdit={canManage(role)}
           candidates={candidates}
+          departments={departments}
           document={document}
           // Every field is seeded from the document, so a different row must
           // start a fresh editor rather than keep the last one's unsaved edits.
@@ -2363,6 +2383,7 @@ export function DocumentFlowScreen({
       ) : (
         <DetailScreen
           document={document}
+          documentTypes={documentTypes}
           onAudit={() => setAuditOpen(true)}
           onBack={onBack}
           onDecision={onDecision}

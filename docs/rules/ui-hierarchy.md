@@ -63,6 +63,8 @@ This went wrong three times in two days — *Document category*, *Reference docu
 
 **Ask one question: does this text head a section or a group of content, or does it label a single value or control?**
 
+**A button or menu item is sentence case** — one capital, on the first word: *Add user*, *Add type*, *Add attachment*, *Save as draft*, *Submit for review*, *Acknowledge & register*, *Mark as obsolete*. The only capitals after that are proper nouns: module names (*Back to Documents*), role names, and PRD-002's own defined terms (*Controlled Document*, *External Document*). A control's `aria-label` matches its visible label; they had drifted on the create form's Document type field.
+
 - **Heads a section or a group → Title Case.** Every section card heading, and every group heading inside one: *Primary Document*, *Document Information*, *Reference Documents*, *Related Documents*, *Referred Documents*, *Revision History*, *Document Category*, *Approval*, *Attachments*, *Reviewers*, *Approver*.
 - **Labels one value or control → sentence case.** Every form field label and every read-only field label: *Document name*, *Document type*, *Effective date*, *Next periodic review*, *Email address*, *First name*, *Related documents* (as the label on a search input). Acronyms keep their case: *Document ID*.
 
@@ -96,6 +98,8 @@ One shape for every screen that lists records, set by Settings > Users and now f
 - **The row action is a “…” menu**, never a bare icon button. One place for row actions means a second action can be added later without redesigning the column.
 - **An identifier and a name are two columns**, never stacked in one cell. Stacked, neither can be scanned down the page — the eye has to read two lines per row to find one value. The identifier keeps the register's link treatment (Brand 900, underline on hover) wherever it appears.
 - **Status and priority use the 8% semantic tints**, never saturated `destructive` — see §Badges.
+
+**A settings screen owns the value, and the feature reads it.** When a Settings story exists for something a module uses — a document type's review frequency, the ID format, the department list — the value lives in one shared module, Settings edits it and the feature reads it. A hard-coded copy in the consuming screen means Settings is showing a value it does not own, and the module is using one nobody can change. Three of those were removed on 2026-11-11.
 
 ## Metric cards
 
@@ -142,6 +146,8 @@ One shape for every screen that lists records, set by Settings > Users and now f
 
 - Mark a required field with a red asterisk immediately after the label text. Mark an optional field with a muted "(Optional)" beside the label. Every field in a form carries one marker or the other, so absence is never ambiguous.
 - Do not add helper text that only repeats what the label, marker, or control already says. Reserve supporting text for rules the user cannot infer.
+- **A Save button is disabled until something in its section has changed**, so the control itself says whether there is anything to save. It returns to disabled after the save.
+- **A button says the verb, not the section it is in.** *Save*, inside a card headed Record Numbering, not *Save Record Numbering* — the heading is right above it and the label repeating it only makes the button longer.
 - A disabled control must change surface, not only dim. Use the Zinc 100 recessed plane with muted text and keep the border at full strength; opacity alone makes a disabled field read as an empty editable one.
 - **The Add-inside-the-input pattern belongs to Tags, and only to Tags.** Typing several short free-text values in a row is the case it serves: Enter adds one, the inline-end Add button is there for anyone who does not know that, and the field stays ready for the next value. Settled as a local convenience on 2026-11-11, deliberately **not** generalised to "any free-text field with an Add".
 - A field whose value comes from a **known set** — Reviewers, Departments, Related and Referred Documents — is a combobox with chips inside the input, never a text box with an Add button. The user is choosing, not composing, and a text box invites a value that does not exist.

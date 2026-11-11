@@ -140,6 +140,34 @@ The implementation now intentionally differs from the older Accura demo and the 
 
 ## Comparison History
 
+### Iteration 53 – The Settings module's three unbuilt stories, and the values they finally own
+
+Built `US-007 - Manage Document Types`, `US-008 - Configure Record Numbering` and `US-009 - Manage Departments` (all PRD-001), which were the last three unbuilt stories in that PRD.
+
+- **Settings > Organisation was telling the user the requirements did not exist.** The section read *"No PRD or user story covers this section, so nothing is built here yet."* That was true when it was written, and false from the moment the 2026-11-10 sync added `US-008` and `US-009` — both of which name `Settings > Organisation` as their entry point. A sentence in the product asserting a requirement does not exist is worse than a backlog item, because nobody reads it as a gap.
+- **`US-007`: the table was missing half the story.** It had Name, Abbreviation, Description, a search and a count; AC-01 also wants the **Periodic Review Frequency**, AC-05 a row **Edit**, AC-03 an **Add Type** form. All built. Validation measured against AC-04: a duplicate abbreviation entered as `br` against the existing `BR` is refused (compared case-insensitively, saved uppercase), and a frequency of `0` is refused as "a whole number of years, 1 or more". A valid save adds the row — measured `Standard Operating Procedure · SOP · — · 4 years`, with the em dash for the blank description.
+- **`US-008`: the preview is generated the same way an ID is.** One function, `formatDocumentId`, serves both, so the preview cannot drift from what the modules produce. Measured AC-02: switching the separator to a slash moved the preview from `ACME-BR-2026-000001` to `ACME/BR/2026/000001`; AC-03: an empty prefix is refused with "Enter an organisation prefix."
+- **`US-009`: departments with the duplicate rule AC-03 spells out** — names differing only in case are the same name. Blank descriptions show an em dash, per AC-01.
+
+**What makes these three worth building together is what they configure.** Each had a hard-coded twin in the module that needed it: the review frequency as `DEFAULT_REVIEW_YEARS = 3` in the document details, the numbering as literals in the create form, the departments as an array in `document-directory.ts`. Settings showed values it did not own, and the modules used values nobody could change. They now live in `components/organisation-settings.ts`, the state sits in `DocumentsPrototype`, and both sides read it.
+
+Measured end to end, without a reload:
+
+| Change in Settings | Effect in Documents |
+|---|---|
+| Record (REC) frequency 3 → 7 years | `ACME-FRM-2026-000006` Next periodic review moved **29 Sep 2029 → 29 Sep 2033** |
+| Added type Standard Operating Procedure (SOP) | The create form's type list went to 12 and includes SOP |
+| Prefix `ACME` → `QMS`, separator → `/` | A document created after saving took the ID **`QMS/BR/2026/000012`** |
+
+- `document-directory.ts` kept only the people roster; its department list is deleted rather than left as a second copy, which is the drift that module exists to prevent.
+- A stale bundle sent me chasing a phantom: clicking Settings did nothing and no error appeared in the console. The code was right — the dev server was serving the pre-refactor page. The Tailwind/HMR trap recorded on 2026-11-10 applies to component changes too, not only to new utility classes.
+- Implementation evidence: `implementation-settings-organisation.jpg`, `implementation-settings-document-types.jpg`.
+- **The register's department filter now reads Settings too.** It had derived its options from the sample rows, so a department added in Settings never appeared until some document already used it, and a renamed one kept its old name. Measured: adding **Quality Assurance** in Settings puts it in the filter immediately, with no document using it.
+- **"Save Record Numbering" became "Save", disabled until something in the section changes.** The heading above it already says Record Numbering, so the label was repeating its own context; and a Save that is always pressable tells the reader nothing about whether there is anything to save. Measured: disabled at rest → enabled after editing the prefix → disabled again after saving.
+- **A sentence-case sweep over every button and menu item.** Six were Title Case against the rest: *Add User*, *Add Type*, *Add Attachment*, *Save as Draft*, *Submit for Review*, *Acknowledge & Register* — the last three especially, because the Draft editor already said *Save as draft* and *Submit for review*, so the same two actions were spelled two ways on two screens. The remaining capitals are proper nouns and stay: module names (*Back to Documents*), role names, and PRD-002's defined terms (*Controlled Document*, *External Document*). One `aria-label` had drifted from its visible label — *Document Type* on a field reading *Document type* — and now matches.
+- Not built: `US-008` AC-05 (settings isolated per organisation) has no second organisation to isolate from, and `US-009`'s rename-keeps-references rule holds only because departments are matched by name — renaming one does not rewrite the documents that reference it.
+- Verification: `tsc --noEmit` and `biome check` pass.
+
 ### Iteration 52 – The lime gets a job
 
 A **Getting started** card at the foot of the navigation rail, above the support links — the shape the user's reference (Wrangle) uses for its trial card.

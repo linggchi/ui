@@ -1,11 +1,11 @@
 /**
- * The people and departments the Documents screens assign work to.
+ * The people the Documents screens assign work to.
  *
- * `US-007` (PRD-002) AC-02 sources departments from Settings > Organisation >
- * Departments, and `US-009 - Manage Departments` is not built — so this is the
- * mockup's saved list, shared rather than re-declared per screen. Two screens
- * each holding their own copy is how the Author field and the Document Type
- * field drifted apart before 2026-11-10.
+ * There is no user-management source for this yet — `US-002` and `US-004`
+ * manage users in Settings, but the prototype does not join the two lists —
+ * so this stays the mockup's roster, shared rather than re-declared per
+ * screen. Two screens each holding their own copy is how the Author field and
+ * the Document Type field drifted apart before 2026-11-10.
  */
 export const people = [
   "Sarah Johnson",
@@ -17,4 +17,7 @@ export const people = [
   "Nina Patel",
 ];
 
-export const departments = ["Engineering", "Manufacturing", "Quality Control"];
+// Departments moved to `organisation-settings.ts` on 2026-11-11, when
+// `US-009 - Manage Departments` was built: they are configured in Settings
+// now, so a second hard-coded copy here would be the drift this module exists
+// to prevent.

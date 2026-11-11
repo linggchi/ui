@@ -78,6 +78,14 @@ import {
 } from "./document-flow-screens";
 import { statusBadgeLook } from "./document-status";
 import {
+  type DepartmentSetting,
+  type DocumentTypeSetting,
+  initialDepartments,
+  initialDocumentTypes,
+  initialNumbering,
+  type NumberingSetting,
+} from "./organisation-settings";
+import {
   initialsOf,
   type ProtoRole,
   RoleSwitcher,
@@ -686,13 +694,6 @@ const typeOptions = [
   ...configuredDocumentTypes.map((value) => ({ label: value, value })),
 ];
 
-const departmentOptions = [
-  { label: "All departments", value: "all" },
-  ...Array.from(new Set(documents.map((document) => document.department))).map(
-    (value) => ({ label: value, value }),
-  ),
-];
-
 const pageSizeOptions = [
   { label: "10", value: "10" },
   { label: "20", value: "20" },
@@ -937,6 +938,31 @@ export function DocumentsPrototype() {
    * and its workflow and read as part of the record.
    */
   const [protoRole, setProtoRole] = useState<ProtoRole>("reviewer");
+
+  /**
+   * Settings owns these, and the Document module reads them. They were three
+   * separate hard-coded copies until 2026-11-11 — see
+   * `components/organisation-settings.ts`.
+   */
+  const [documentTypes, setDocumentTypes] =
+    useState<DocumentTypeSetting[]>(initialDocumentTypes);
+  const [departmentSettings, setDepartmentSettings] =
+    useState<DepartmentSetting[]>(initialDepartments);
+  const [numbering, setNumbering] =
+    useState<NumberingSetting>(initialNumbering);
+  const departmentNames = departmentSettings.map(
+    (department) => department.name,
+  );
+  /**
+   * `US-006` AC-03: the filter's options come from Settings, not from the
+   * rows. Derived from the sample data until 2026-11-11, which meant a
+   * department added in Settings never appeared here until some document
+   * already used it — and a renamed one kept its old name in the filter.
+   */
+  const departmentOptions = [
+    { label: "All departments", value: "all" },
+    ...departmentNames.map((value) => ({ label: value, value })),
+  ];
 
   // US-007 AC-03 saves the new document and returns to the list, so the rows
   // are state rather than the module-level sample array.
@@ -1184,7 +1210,14 @@ export function DocumentsPrototype() {
 
         <main className="min-h-[calc(100svh-5rem)] p-5 sm:p-6 xl:p-8">
           {activeModule === "settings" ? (
-            <SettingsScreen />
+            <SettingsScreen
+              departments={departmentSettings}
+              documentTypes={documentTypes}
+              numbering={numbering}
+              onDepartmentsChange={setDepartmentSettings}
+              onDocumentTypesChange={setDocumentTypes}
+              onNumberingChange={setNumbering}
+            />
           ) : activeModule === "dashboard" ? (
             <DashboardScreen
               onOpenDocuments={() => {
@@ -1596,6 +1629,9 @@ export function DocumentsPrototype() {
           ) : activeView === "create" ? (
             <CreateDocumentScreen
               candidates={records}
+              departments={departmentNames}
+              documentTypes={documentTypes}
+              numbering={numbering}
               nextSequence={records.length + 1}
               onBack={() => navigateToView("list")}
               onSaved={(created) => {
@@ -1616,7 +1652,9 @@ export function DocumentsPrototype() {
           ) : (
             <DocumentFlowScreen
               candidates={records}
+              departments={departmentNames}
               document={openedDocument ?? records[0]}
+              documentTypes={documentTypes}
               onApprove={approveOpenedDocument}
               onBack={() => navigateToView("list")}
               onCreateRevision={(revision) =>

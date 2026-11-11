@@ -61,29 +61,17 @@ import {
   SectionCard,
   SectionHeading,
 } from "@/components/accura-form";
-import { departments, people } from "@/components/document-directory";
+import { people } from "@/components/document-directory";
+import {
+  type DocumentTypeSetting,
+  formatDocumentId,
+  type NumberingSetting,
+} from "@/components/organisation-settings";
 import {
   type ReferenceCandidate,
   type ReferenceLink,
   ReferencePicker,
 } from "@/components/reference-picker";
-
-// US-007 AC-02: Document Type options come from Settings > Documents >
-// Document Types. External Document (EXT) is excluded here because PRD-002
-// fixes it to External Documents, which US-010 covers.
-const controlledDocumentTypes = [
-  "Batch Record (BR)",
-  "Design Specification (DS)",
-  "Functional Specification (FS)",
-  "Material Specification (MS)",
-  "Product Specification (PS)",
-  "Record (REC)",
-  "Report (REP)",
-  "Template (TMP)",
-  "Test Method (TM)",
-  "User Requirements Specification (URS)",
-  "Validation Master Plan (VMP)",
-];
 
 // US-007 AC-02: Department options come from Settings > Organisation >
 // Departments. US-009 is not built, so these mirror the mockup's list.
@@ -97,32 +85,11 @@ const AUTHOR = "Amit Kothari";
 
 const reviewerOptions = people.map((value) => ({ label: value, value }));
 
-// US-007 AC-02 builds the Document ID from Settings > Organisation > Record
-// Numbering. US-008 is not built, so these are the mockup's saved values and
-// reproduce PRD-002's worked example, `ACME-BR-2026-000001`.
-const recordNumbering = {
-  includeYear: true,
-  organisationPrefix: "ACME",
-  separator: "-",
-  sequenceLength: 6,
-};
-
 const MAX_PRIMARY_FILE_MB = 50;
 const MAX_ATTACHMENTS = 5;
 
 function abbreviationOf(documentType: string) {
   return documentType.match(/\(([^)]+)\)$/)?.[1] ?? "";
-}
-
-function nextDocumentId(documentType: string, sequence: number) {
-  const { includeYear, organisationPrefix, separator, sequenceLength } =
-    recordNumbering;
-  return [
-    organisationPrefix,
-    abbreviationOf(documentType),
-    ...(includeYear ? [String(new Date().getFullYear())] : []),
-    String(sequence).padStart(sequenceLength, "0"),
-  ].join(separator);
 }
 
 type UploadedFile = { name: string; sizeMb: number };
@@ -162,13 +129,22 @@ function registrationDate() {
 
 export function CreateDocumentScreen({
   candidates,
+  departments,
+  documentTypes,
   nextSequence,
+  numbering,
   onBack,
   onSaved,
 }: {
   /** Every document that could be linked, for `US-007` AC-02's references. */
   candidates: ReferenceCandidate[];
+  /** `US-009`: Settings > Organisation > Departments. */
+  departments: string[];
+  /** `US-007` (PRD-001): Settings > Documents > Document Types. */
+  documentTypes: DocumentTypeSetting[];
   nextSequence: number;
+  /** `US-008`: Settings > Organisation > Record Numbering. */
+  numbering: NumberingSetting;
   onBack: () => void;
   onSaved: (created: CreatedDocument) => void;
 }) {
@@ -237,7 +213,7 @@ export function CreateDocumentScreen({
     setTagDraft("");
   };
 
-  // US-007 AC-03: both Save as Draft and Submit for Review run the same
+  // US-007 AC-03: both Save as draft and Submit for review run the same
   // validation. A valid Primary File is required for either action.
   const validate = () => {
     if (!name.trim()) return "Enter a document name (maximum 100 characters).";
@@ -280,7 +256,11 @@ export function CreateDocumentScreen({
         name: file.title || file.name,
       })),
       department,
-      documentId: nextDocumentId(type, nextSequence),
+      documentId: formatDocumentId(
+        numbering,
+        abbreviationOf(type),
+        nextSequence,
+      ),
       // US-010 AC-03: an External Document is effective from its registration
       // date. A controlled document has no effective date until it is approved.
       effectiveDate: status === "Approved" ? registrationDate() : null,
@@ -323,6 +303,12 @@ export function CreateDocumentScreen({
   // the 2026-11-11 decision, and it routes here so it cannot lose work.
   const leave = () => (isDirty ? setConfirmDiscard(true) : onBack());
 
+  // US-007 (PRD-001) AC-04: the configured types, less External Document,
+  // which PRD-002 fixes to the External flow that US-010 covers.
+  const controlledDocumentTypes = documentTypes
+    .filter((type) => type.abbreviation !== "EXT")
+    .map((type) => `${type.name} (${type.abbreviation})`);
+
   const typeField = (
     <Field>
       <FormLabel>Document type</FormLabel>
@@ -346,7 +332,7 @@ export function CreateDocumentScreen({
           onValueChange={(value) => setDocumentType(String(value))}
           value={documentType}
         >
-          <SelectTrigger aria-label="Document Type">
+          <SelectTrigger aria-label="Document type">
             <SelectValue placeholder="Select a type" />
           </SelectTrigger>
           <SelectPopup>
@@ -532,7 +518,7 @@ export function CreateDocumentScreen({
                   variant="outline"
                 >
                   <PlusIcon aria-hidden="true" />
-                  Add Attachment
+                  Add attachment
                 </Button>
               }
               hint={`Maximum ${MAX_ATTACHMENTS} files. Attachments do not receive separate Document IDs.`}
@@ -881,7 +867,7 @@ export function CreateDocumentScreen({
                 Cancel
               </Button>
               <Button onClick={() => save("Approved")}>
-                Acknowledge &amp; Register
+                Acknowledge &amp; register
               </Button>
             </div>
           </>
@@ -895,10 +881,10 @@ export function CreateDocumentScreen({
                 Cancel
               </Button>
               <Button onClick={() => save("Draft")} variant="outline">
-                Save as Draft
+                Save as draft
               </Button>
               <Button onClick={() => save("In Review")}>
-                Submit for Review
+                Submit for review
               </Button>
             </div>
           </>

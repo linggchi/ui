@@ -32,7 +32,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@coss/ui/components/empty";
-import { Field } from "@coss/ui/components/field";
+import { Field, FieldDescription } from "@coss/ui/components/field";
 import { Input } from "@coss/ui/components/input";
 import {
   InputGroup,
@@ -89,6 +89,13 @@ import {
   SectionCard,
   SectionHeading,
 } from "@/components/accura-form";
+import {
+  DEFAULT_REVIEW_YEARS,
+  type DepartmentSetting,
+  type DocumentTypeSetting,
+  formatDocumentId,
+  type NumberingSetting,
+} from "@/components/organisation-settings";
 
 type SettingsSection =
   | "asset-management"
@@ -306,70 +313,16 @@ const initialUsers: EditableUser[] = [
 // exactly these twelve and no others, so sample documents must use them. AC-03
 // lets an administrator add more at runtime; none are seeded.
 // The abbreviation drives Document ID generation (e.g. SOP-001).
-const documentTypes = [
-  {
-    abbreviation: "BR",
-    description: "Instructions and records for manufacturing a specific batch",
-    name: "Batch Record",
-  },
-  {
-    abbreviation: "DS",
-    description: "Technical design details for implementing requirements",
-    name: "Design Specification",
-  },
-  {
-    abbreviation: "EXT",
-    description: "Externally issued documents used by the organisation",
-    name: "External Document",
-  },
-  {
-    abbreviation: "FS",
-    description: "Description of how a system will meet user requirements",
-    name: "Functional Specification",
-  },
-  {
-    abbreviation: "MS",
-    description: "Requirements and acceptance criteria for materials",
-    name: "Material Specification",
-  },
-  {
-    abbreviation: "PS",
-    description: "Requirements and acceptance criteria for a finished product",
-    name: "Product Specification",
-  },
-  {
-    abbreviation: "REC",
-    description: "Evidence of activities performed or results obtained",
-    name: "Record",
-  },
-  {
-    abbreviation: "REP",
-    description:
-      "Documented results, findings and conclusions from an activity",
-    name: "Report",
-  },
-  {
-    abbreviation: "TMP",
-    description: "Standard layout used to create consistent documents",
-    name: "Template",
-  },
-  {
-    abbreviation: "TM",
-    description: "Instructions and criteria for performing a test",
-    name: "Test Method",
-  },
-  {
-    abbreviation: "URS",
-    description: "Requirements describing what a system or equipment must do",
-    name: "User Requirements Specification",
-  },
-  {
-    abbreviation: "VMP",
-    description:
-      "Overall strategy and responsibilities for validation activities",
-    name: "Validation Master Plan",
-  },
+const separatorOptions = [
+  { label: "Hyphen  ACME-BR-2026-000001", value: "-" },
+  { label: "Slash  ACME/BR/2026/000001", value: "/" },
+  { label: "Dot  ACME.BR.2026.000001", value: "." },
 ];
+
+const sequenceOptions = [3, 4, 5, 6, 8].map((length) => ({
+  label: `${length} digits`,
+  value: String(length),
+}));
 
 const moduleFilterOptions = [
   { label: "All modules", value: "all" },
@@ -628,7 +581,7 @@ function UserFormDialog({
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogPopup className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit user" : "Add User"}</DialogTitle>
+          <DialogTitle>{editing ? "Edit user" : "Add user"}</DialogTitle>
           <DialogDescription>
             {editing
               ? "Update user details, departments, and role."
@@ -789,7 +742,7 @@ function UserFormDialog({
         <DialogFooter>
           <DialogClose render={<Button variant="ghost" />}>Cancel</DialogClose>
           <Button onClick={onSubmit}>
-            {editing ? "Save changes" : "Add User"}
+            {editing ? "Save changes" : "Add user"}
           </Button>
         </DialogFooter>
       </DialogPopup>
@@ -797,7 +750,21 @@ function UserFormDialog({
   );
 }
 
-export function SettingsScreen() {
+export function SettingsScreen({
+  departments,
+  documentTypes,
+  numbering,
+  onDepartmentsChange,
+  onDocumentTypesChange,
+  onNumberingChange,
+}: {
+  departments: DepartmentSetting[];
+  documentTypes: DocumentTypeSetting[];
+  numbering: NumberingSetting;
+  onDepartmentsChange: (next: DepartmentSetting[]) => void;
+  onDocumentTypesChange: (next: DocumentTypeSetting[]) => void;
+  onNumberingChange: (next: NumberingSetting) => void;
+}) {
   const [section, setSection] = useState<SettingsSection>("users");
   const [usersTab, setUsersTab] = useState<"roles" | "users">("users");
   const [users, setUsers] = useState<EditableUser[]>(initialUsers);
@@ -805,6 +772,163 @@ export function SettingsScreen() {
   const [roleQuery, setRoleQuery] = useState("");
   const [moduleFilter, setModuleFilter] = useState("all");
   const [typeQuery, setTypeQuery] = useState("");
+  // US-007 AC-03 to AC-06: one dialog for Add and Edit.
+  const [typeFormOpen, setTypeFormOpen] = useState(false);
+  const [typeEditing, setTypeEditing] = useState<string | null>(null);
+  const [typeForm, setTypeForm] = useState({
+    abbreviation: "",
+    description: "",
+    frequencyYears: String(DEFAULT_REVIEW_YEARS),
+    name: "",
+  });
+  const [typeError, setTypeError] = useState<string | null>(null);
+
+  // US-008: edited as a draft, so Save is a real action and Cancel is simply
+  // navigating away without pressing it.
+  const [numberingDraft, setNumberingDraft] =
+    useState<NumberingSetting>(numbering);
+  const [numberingError, setNumberingError] = useState<string | null>(null);
+
+  // US-009 AC-02 to AC-05.
+  const [departmentFormOpen, setDepartmentFormOpen] = useState(false);
+  const [departmentEditing, setDepartmentEditing] = useState<string | null>(
+    null,
+  );
+  const [departmentForm, setDepartmentForm] = useState({
+    description: "",
+    name: "",
+  });
+  const [departmentError, setDepartmentError] = useState<string | null>(null);
+
+  const numberingDirty =
+    numberingDraft.prefix !== numbering.prefix ||
+    numberingDraft.separator !== numbering.separator ||
+    numberingDraft.sequenceLength !== numbering.sequenceLength ||
+    numberingDraft.includeYear !== numbering.includeYear;
+
+  const saveNumbering = () => {
+    const prefix = numberingDraft.prefix.trim();
+    // AC-03: the prefix is required.
+    if (!prefix) {
+      setNumberingError("Enter an organisation prefix.");
+      return;
+    }
+    onNumberingChange({ ...numberingDraft, prefix });
+    setNumberingError(null);
+    toastManager.add({
+      title: "Record numbering saved.",
+      type: "success",
+    });
+  };
+
+  const openDepartmentForm = (department?: DepartmentSetting) => {
+    setDepartmentEditing(department?.name ?? null);
+    setDepartmentForm({
+      description: department?.description ?? "",
+      name: department?.name ?? "",
+    });
+    setDepartmentError(null);
+    setDepartmentFormOpen(true);
+  };
+
+  const submitDepartmentForm = () => {
+    const name = departmentForm.name.trim();
+    if (!name) {
+      setDepartmentError("Enter a department name.");
+      return;
+    }
+    // AC-03: names differing only in case are the same name.
+    const clash = departments.some(
+      (department) =>
+        department.name.toLowerCase() === name.toLowerCase() &&
+        department.name !== departmentEditing,
+    );
+    if (clash) {
+      setDepartmentError(
+        "This department name already exists. Enter a different name.",
+      );
+      return;
+    }
+    const saved: DepartmentSetting = {
+      description: departmentForm.description.trim(),
+      name,
+    };
+    onDepartmentsChange(
+      departmentEditing
+        ? departments.map((department) =>
+            department.name === departmentEditing ? saved : department,
+          )
+        : [...departments, saved],
+    );
+    setDepartmentFormOpen(false);
+    setDepartmentError(null);
+    toastManager.add({
+      title: departmentEditing ? `Saved changes to ${name}.` : `${name} added.`,
+      type: "success",
+    });
+  };
+
+  const openTypeForm = (type?: DocumentTypeSetting) => {
+    setTypeEditing(type?.abbreviation ?? null);
+    setTypeForm({
+      abbreviation: type?.abbreviation ?? "",
+      description: type?.description ?? "",
+      frequencyYears: String(type?.frequencyYears ?? DEFAULT_REVIEW_YEARS),
+      name: type?.name ?? "",
+    });
+    setTypeError(null);
+    setTypeFormOpen(true);
+  };
+
+  const submitTypeForm = () => {
+    const name = typeForm.name.trim();
+    // AC-04: abbreviations are compared case-insensitively and saved upper.
+    const abbreviation = typeForm.abbreviation.trim().toUpperCase();
+    const years = Number(typeForm.frequencyYears);
+
+    if (!name) return setTypeError("Enter a name for this document type.");
+    if (name.length > 100)
+      return setTypeError("The name cannot exceed 100 characters.");
+    if (!abbreviation) return setTypeError("Enter an abbreviation.");
+    if (abbreviation.length > 10)
+      return setTypeError("The abbreviation cannot exceed 10 characters.");
+    if (typeForm.description.trim().length > 250)
+      return setTypeError("The description cannot exceed 250 characters.");
+    if (!Number.isInteger(years) || years < 1)
+      return setTypeError(
+        "Periodic Review Frequency must be a whole number of years, 1 or more.",
+      );
+    const clash = documentTypes.some(
+      (type) =>
+        type.abbreviation === abbreviation && type.abbreviation !== typeEditing,
+    );
+    if (clash)
+      return setTypeError(
+        `The abbreviation ${abbreviation} is already used by another document type.`,
+      );
+
+    const saved: DocumentTypeSetting = {
+      abbreviation,
+      description: typeForm.description.trim(),
+      frequencyYears: years,
+      name,
+    };
+    onDocumentTypesChange(
+      typeEditing
+        ? documentTypes.map((type) =>
+            type.abbreviation === typeEditing ? saved : type,
+          )
+        : [...documentTypes, saved],
+    );
+    setTypeFormOpen(false);
+    setTypeError(null);
+    toastManager.add({
+      title: typeEditing
+        ? `Saved changes to ${name}.`
+        : `${name} (${abbreviation}) added.`,
+      type: "success",
+    });
+  };
   const [viewingRole, setViewingRole] = useState<Role | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -840,7 +964,7 @@ export function SettingsScreen() {
         .toLowerCase()
         .includes(query),
     );
-  }, [typeQuery]);
+  }, [documentTypes, typeQuery]);
 
   const assignedCount = (roleName: string) =>
     users.filter((user) => user.role === roleName).length;
@@ -1000,7 +1124,7 @@ export function SettingsScreen() {
                   usersTab === "users" ? (
                     <Button onClick={openInvite}>
                       <PlusIcon aria-hidden="true" />
-                      Add User
+                      Add user
                     </Button>
                   ) : undefined
                 }
@@ -1261,6 +1385,12 @@ export function SettingsScreen() {
             <SectionCard>
               <SectionHeading
                 description="Document types, numbering, and review defaults. The abbreviation drives Document ID generation, for example SOP-001."
+                action={
+                  <Button onClick={() => openTypeForm()}>
+                    <PlusIcon aria-hidden="true" />
+                    Add type
+                  </Button>
+                }
                 title="Document Types"
               />
 
@@ -1293,8 +1423,14 @@ export function SettingsScreen() {
                         <TableHead className="w-[130px] text-xs">
                           Abbreviation
                         </TableHead>
-                        <TableHead className="pe-5 text-xs">
-                          Description
+                        <TableHead className="text-xs">Description</TableHead>
+                        {/* US-007 AC-01: the configured review frequency, and
+                            the default of 3 years where a type sets none. */}
+                        <TableHead className="w-[150px] text-xs">
+                          Review frequency
+                        </TableHead>
+                        <TableHead className="w-12 pe-5 text-right text-xs">
+                          <span className="sr-only">Actions</span>
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1313,14 +1449,39 @@ export function SettingsScreen() {
                                 {type.abbreviation}
                               </Badge>
                             </TableCell>
-                            <TableCell className="whitespace-normal pe-5 align-top text-muted-foreground text-sm leading-snug">
-                              {type.description}
+                            <TableCell className="whitespace-normal align-top text-muted-foreground text-sm leading-snug">
+                              {type.description || "—"}
+                            </TableCell>
+                            <TableCell className="align-top text-sm tabular-nums">
+                              {type.frequencyYears}{" "}
+                              {type.frequencyYears === 1 ? "year" : "years"}
+                            </TableCell>
+                            <TableCell className="pe-5 text-right align-top">
+                              <Menu>
+                                <MenuTrigger
+                                  render={
+                                    <Button
+                                      aria-label={`More actions for ${type.name}`}
+                                      size="icon-sm"
+                                      variant="ghost"
+                                    />
+                                  }
+                                >
+                                  <MoreHorizontalIcon aria-hidden="true" />
+                                </MenuTrigger>
+                                <MenuPopup align="end">
+                                  <MenuItem onClick={() => openTypeForm(type)}>
+                                    <PencilIcon aria-hidden="true" />
+                                    Edit type
+                                  </MenuItem>
+                                </MenuPopup>
+                              </Menu>
                             </TableCell>
                           </TableRow>
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={3}>
+                          <TableCell colSpan={5}>
                             <Empty>
                               <EmptyHeader>
                                 <EmptyMedia variant="icon">
@@ -1344,15 +1505,214 @@ export function SettingsScreen() {
             </SectionCard>
           )}
 
-          {section !== "users" && section !== "documents" && (
-            <SectionCard>
-              <SectionHeading
-                description={sectionIntro[section]}
-                title={activeItem.label}
-              />
-              <NotSpecified section={activeItem} />
-            </SectionCard>
+          {/* US-008 and US-009 both live at Settings > Organisation. Until
+              2026-11-11 this section said "No PRD or user story covers this
+              section" — true when it was written, and false from the moment
+              the 2026-11-10 sync added the two stories. */}
+          {section === "organization" && (
+            <>
+              <SectionCard>
+                <SectionHeading
+                  description="The Document ID format for this organisation. The Document Type segment comes from Settings > Documents."
+                  title="Record Numbering"
+                />
+                <div className="flex flex-col gap-4 p-5">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field>
+                      <FormLabel>Organisation prefix</FormLabel>
+                      <Input
+                        aria-invalid={numberingError !== null}
+                        maxLength={10}
+                        onChange={(event) => {
+                          setNumberingDraft({
+                            ...numberingDraft,
+                            prefix: event.target.value.toUpperCase(),
+                          });
+                          setNumberingError(null);
+                        }}
+                        placeholder="ACME"
+                        type="text"
+                        value={numberingDraft.prefix}
+                      />
+                      {numberingError && (
+                        <FieldDescription className="text-destructive">
+                          {numberingError}
+                        </FieldDescription>
+                      )}
+                    </Field>
+                    <Field>
+                      <FormLabel>Separator</FormLabel>
+                      <Select
+                        items={separatorOptions}
+                        onValueChange={(value) =>
+                          setNumberingDraft({
+                            ...numberingDraft,
+                            separator: String(
+                              value,
+                            ) as NumberingSetting["separator"],
+                          })
+                        }
+                        value={numberingDraft.separator}
+                      >
+                        <SelectTrigger aria-label="Separator">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectPopup>
+                          {separatorOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectPopup>
+                      </Select>
+                    </Field>
+                    <Field>
+                      <FormLabel>Sequence length</FormLabel>
+                      <Select
+                        items={sequenceOptions}
+                        onValueChange={(value) =>
+                          setNumberingDraft({
+                            ...numberingDraft,
+                            sequenceLength: Number(value),
+                          })
+                        }
+                        value={String(numberingDraft.sequenceLength)}
+                      >
+                        <SelectTrigger aria-label="Sequence length">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectPopup>
+                          {sequenceOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectPopup>
+                      </Select>
+                    </Field>
+                    <Field>
+                      <FormLabel optional>Include year</FormLabel>
+                      <div className="flex h-8.5 items-center gap-2">
+                        <Switch
+                          checked={numberingDraft.includeYear}
+                          id="include-year"
+                          onCheckedChange={(checked) =>
+                            setNumberingDraft({
+                              ...numberingDraft,
+                              includeYear: checked,
+                            })
+                          }
+                        />
+                        <label className="text-sm" htmlFor="include-year">
+                          Add the current year to every ID
+                        </label>
+                      </div>
+                    </Field>
+                  </div>
+
+                  {/* US-008 AC-02: the preview is generated the same way a
+                      real ID is, so it cannot drift from what modules make. */}
+                  <div className="rounded-xl border bg-[var(--accura-zinc-50)] p-4">
+                    <p className="text-muted-foreground text-xs">
+                      Document ID preview
+                    </p>
+                    <p className="identifier mt-1 font-medium text-lg">
+                      {formatDocumentId(numberingDraft, "BR", 1)}
+                    </p>
+                    <p className="mt-2 text-muted-foreground text-xs">
+                      Prefix · Document Type abbreviation
+                      {numberingDraft.includeYear ? " · year" : ""} · sequence,
+                      zero-padded to {numberingDraft.sequenceLength} digits.
+                    </p>
+                  </div>
+                </div>
+                {/* Disabled until something in this section changes, so the
+                    control states whether there is anything to save. */}
+                <div className="flex justify-end border-t px-5 py-4">
+                  <Button disabled={!numberingDirty} onClick={saveNumbering}>
+                    Save
+                  </Button>
+                </div>
+              </SectionCard>
+
+              <SectionCard>
+                <SectionHeading
+                  action={
+                    <Button onClick={() => openDepartmentForm()}>
+                      <PlusIcon aria-hidden="true" />
+                      Add department
+                    </Button>
+                  }
+                  description="Departments a document, user or record can be assigned to."
+                  title="Departments"
+                />
+                <Table>
+                  <TableHeader className="bg-secondary/72">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-[32%] ps-5 text-xs">
+                        Name
+                      </TableHead>
+                      <TableHead className="text-xs">Description</TableHead>
+                      <TableHead className="w-12 pe-5 text-right text-xs">
+                        <span className="sr-only">Actions</span>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {departments.map((department) => (
+                      <TableRow
+                        className="hover:bg-secondary/48"
+                        key={department.name}
+                      >
+                        <TableCell className="ps-5 font-medium">
+                          {department.name}
+                        </TableCell>
+                        {/* US-009 AC-01: a blank description is an em dash. */}
+                        <TableCell className="whitespace-normal text-muted-foreground text-sm leading-snug">
+                          {department.description || "—"}
+                        </TableCell>
+                        <TableCell className="pe-5 text-right">
+                          <Menu>
+                            <MenuTrigger
+                              render={
+                                <Button
+                                  aria-label={`More actions for ${department.name}`}
+                                  size="icon-sm"
+                                  variant="ghost"
+                                />
+                              }
+                            >
+                              <MoreHorizontalIcon aria-hidden="true" />
+                            </MenuTrigger>
+                            <MenuPopup align="end">
+                              <MenuItem
+                                onClick={() => openDepartmentForm(department)}
+                              >
+                                <PencilIcon aria-hidden="true" />
+                                Edit department
+                              </MenuItem>
+                            </MenuPopup>
+                          </Menu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </SectionCard>
+            </>
           )}
+
+          {section !== "users" &&
+            section !== "documents" &&
+            section !== "organization" && (
+              <SectionCard>
+                <SectionHeading
+                  description={sectionIntro[section]}
+                  title={activeItem.label}
+                />
+                <NotSpecified section={activeItem} />
+              </SectionCard>
+            )}
         </div>
       </div>
 
@@ -1362,6 +1722,149 @@ export function SettingsScreen() {
         }}
         role={viewingRole}
       />
+
+      {/* US-007 AC-03 to AC-06 */}
+      <Dialog onOpenChange={setTypeFormOpen} open={typeFormOpen}>
+        <DialogPopup className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {typeEditing ? "Edit document type" : "Add document type"}
+            </DialogTitle>
+            <DialogDescription>
+              The abbreviation appears in every Document ID of this type and
+              must be unique.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogPanel className="flex flex-col gap-4">
+            <Field>
+              <FormLabel>Name</FormLabel>
+              <Input
+                maxLength={100}
+                onChange={(event) =>
+                  setTypeForm({ ...typeForm, name: event.target.value })
+                }
+                placeholder="Standard Operating Procedure"
+                type="text"
+                value={typeForm.name}
+              />
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field>
+                <FormLabel>Abbreviation</FormLabel>
+                <Input
+                  maxLength={10}
+                  onChange={(event) =>
+                    setTypeForm({
+                      ...typeForm,
+                      abbreviation: event.target.value.toUpperCase(),
+                    })
+                  }
+                  placeholder="SOP"
+                  type="text"
+                  value={typeForm.abbreviation}
+                />
+              </Field>
+              <Field>
+                <FormLabel>Review frequency (years)</FormLabel>
+                <Input
+                  inputMode="numeric"
+                  onChange={(event) =>
+                    setTypeForm({
+                      ...typeForm,
+                      frequencyYears: event.target.value,
+                    })
+                  }
+                  type="text"
+                  value={typeForm.frequencyYears}
+                />
+                <FieldDescription>
+                  Counted from the approval date. The default is{" "}
+                  {DEFAULT_REVIEW_YEARS} years.
+                </FieldDescription>
+              </Field>
+            </div>
+            <Field>
+              <FormLabel optional>Description</FormLabel>
+              <Textarea
+                maxLength={250}
+                onChange={(event) =>
+                  setTypeForm({ ...typeForm, description: event.target.value })
+                }
+                value={typeForm.description}
+              />
+            </Field>
+            {typeError && (
+              <p className="font-medium text-destructive text-sm">
+                {typeError}
+              </p>
+            )}
+          </DialogPanel>
+          <DialogFooter>
+            <DialogClose render={<Button variant="ghost" />}>
+              Cancel
+            </DialogClose>
+            <Button onClick={submitTypeForm}>
+              {typeEditing ? "Save changes" : "Add type"}
+            </Button>
+          </DialogFooter>
+        </DialogPopup>
+      </Dialog>
+
+      {/* US-009 AC-02 to AC-05 */}
+      <Dialog onOpenChange={setDepartmentFormOpen} open={departmentFormOpen}>
+        <DialogPopup className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {departmentEditing ? "Edit department" : "Add department"}
+            </DialogTitle>
+            <DialogDescription>
+              Renaming a department keeps every record and assignment linked to
+              it.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogPanel className="flex flex-col gap-4">
+            <Field>
+              <FormLabel>Name</FormLabel>
+              <Input
+                onChange={(event) =>
+                  setDepartmentForm({
+                    ...departmentForm,
+                    name: event.target.value,
+                  })
+                }
+                placeholder="Quality Assurance"
+                type="text"
+                value={departmentForm.name}
+              />
+            </Field>
+            <Field>
+              <FormLabel optional>Description</FormLabel>
+              <Textarea
+                onChange={(event) =>
+                  setDepartmentForm({
+                    ...departmentForm,
+                    description: event.target.value,
+                  })
+                }
+                value={departmentForm.description}
+              />
+            </Field>
+            {departmentError && (
+              <p className="font-medium text-destructive text-sm">
+                {departmentError}
+              </p>
+            )}
+          </DialogPanel>
+          <DialogFooter>
+            <DialogClose render={<Button variant="ghost" />}>
+              Cancel
+            </DialogClose>
+            <Button onClick={submitDepartmentForm}>
+              {departmentEditing ? "Save changes" : "Add department"}
+            </Button>
+          </DialogFooter>
+        </DialogPopup>
+      </Dialog>
 
       <UserFormDialog
         editing={editingId !== null}
