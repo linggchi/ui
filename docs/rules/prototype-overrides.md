@@ -21,11 +21,27 @@ replaces*; the reasoning belongs to the rule it links to.
 | Icon-only buttons keep full-strength icons | `apps/accura-prototype/app/globals.css` | COSS dims every button icon to 80% | [`ui-hierarchy.md`](ui-hierarchy.md) — Icons |
 | Table row actions use the 28 px icon button | `size="icon-sm"` on row action buttons in the prototype screens | The 24 px `icon-xs` used elsewhere | [`ui-hierarchy.md`](ui-hierarchy.md) — Icons |
 | Underline tabs with Brand 950 selection | `apps/accura-prototype/components/accura-tabs.tsx` | The COSS segmented tab default | [`ui-hierarchy.md`](ui-hierarchy.md) — Tabs |
-| Disabled inputs take the Zinc 100 recessed surface | `has-disabled:` classes on the affected `Input` | COSS signals disabled with `opacity-64` alone | [`ui-hierarchy.md`](ui-hierarchy.md) — Form fields |
-| Every form field is marked required or optional | Label markup in the prototype forms | Marking only required fields | [`ui-hierarchy.md`](ui-hierarchy.md) — Form fields |
+| Disabled inputs take the Zinc 100 recessed surface | `RECESSED_INPUT` in `apps/accura-prototype/components/accura-form.tsx` | COSS signals disabled with `opacity-64` alone | [`ui-hierarchy.md`](ui-hierarchy.md) — Form fields |
+| Every form field is marked required or optional | `FormLabel` in `apps/accura-prototype/components/accura-form.tsx` | Marking only required fields | [`ui-hierarchy.md`](ui-hierarchy.md) — Form fields |
+| One badge size: 22 px tall, 12 px text | `[data-slot="badge"]` in `apps/accura-prototype/app/globals.css` | COSS shrinking a badge to 18 px from `sm` up | [`ui-hierarchy.md`](ui-hierarchy.md) — Badges |
+| The segmented control track is Zinc 200 | `SegmentedControl` className in `apps/accura-prototype/components/create-document-screen.tsx` | COSS's lighter `bg-muted` track | [`ui-hierarchy.md`](ui-hierarchy.md) — Navigation Selection |
 | User rows render as an avatar, name, and email cluster | `UserIdentity` in the Settings screens | A plain name and email stack | [`user-identity.md`](user-identity.md) |
+| A `Prototype · Viewing as` role switcher on the document details screen | `PROTO_ROLES` and the dashed switcher bar in `apps/accura-prototype/components/document-flow-screens.tsx` | Nothing in the mockup — it exists only because authentication is not built | [`ui-hierarchy.md`](ui-hierarchy.md) — Gated actions and decision dialogs |
 
 ## Notes
+
+- The Accura form conventions — `FormLabel`, `RECESSED_INPUT`, `SectionCard`
+  and `SectionHeading` — live in
+  `apps/accura-prototype/components/accura-form.tsx`. Import them; do not
+  re-derive them in a screen. They were duplicated per screen until
+  2026-11-10, which is exactly how a screen drifted off them.
+
+- The **role switcher is prototype chrome, not a permission model.** It is
+  deliberately marked as such — a `Prototype` badge, a dashed border, muted
+  surface — so it is never mistaken for a screen to build. It exists so that
+  `US-012` AC-01's gate can be demonstrated from both sides while there is no
+  signed-in user. Delete it the moment real permissions arrive; do not grow
+  features on it.
 
 - `Input` applies its `className` to the wrapper span, not the inner `input`
   element, and styles the disabled state with `has-disabled:`. A `disabled:`

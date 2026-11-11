@@ -6,6 +6,7 @@ This file is the entry point for people and AI agents working on Accura inside t
 
 Read these sources in order:
 
+0. The requirements drift check in [`AGENTS.md`](AGENTS.md#requirements-sync-protocol). Product requirements are authored by the BA in `../requirements`, outside this repository, and the prototype is only as current as the baseline commit recorded in [`docs/agent-worklog.md`](docs/agent-worklog.md).
 1. [`docs/product-knowledge/overview.md`](docs/product-knowledge/overview.md) — current product understanding, users, business logic, shared workflows, and open questions.
 2. Read the relevant module overview, starting with [`docs/product-knowledge/modules/documents/overview.md`](docs/product-knowledge/modules/documents/overview.md) for Documents.
 3. Read the applicable files in [`docs/rules/`](docs/rules/), currently [`ui-hierarchy.md`](docs/rules/ui-hierarchy.md), [`user-identity.md`](docs/rules/user-identity.md), and [`visual-system.md`](docs/rules/visual-system.md).
@@ -18,6 +19,7 @@ Read these sources in order:
 
 | Location | Owns | Must not own |
 |---|---|---|
+| `../requirements/` (separate repository, read-only) | The BA's authored PRDs, user stories, Acceptance Criteria, templates, and research — the single source of truth for product requirements | Anything written from this repository; it is never edited, copied, or vendored here |
 | `docs/product-knowledge/` | Current product facts, business logic, users, workflows, module specifications, source evidence | Design-system rules, implementation history, session history |
 | `docs/rules/` | Current approved UI, UX, accessibility, content, and component usage rules, and the index of deliberate departures from library defaults in [`prototype-overrides.md`](docs/rules/prototype-overrides.md) | Historical rationale or implementation evidence |
 | `docs/visual-references/` | Candidate visual directions and comparison notes that require explicit approval before implementation | Approved rules or automatic implementation instructions |
@@ -35,7 +37,7 @@ Read these sources in order:
 ## Accura Working Flow
 
 ```text
-Product sources and evidence
+../requirements/  (BA-authored, read-only — baseline commit recorded in the work log)
   → docs/product-knowledge/
   → docs/rules/
   → brand-assets/
@@ -46,7 +48,8 @@ Product sources and evidence
 
 ## Where To Put New Information
 
-- New or corrected product fact → `docs/product-knowledge/`.
+- New or corrected product fact → `docs/product-knowledge/`, citing its `../requirements/` path and AC id. Never a copy of the requirement text as the source of truth.
+- A requirements update from the BA → run the [Requirements Sync Protocol](AGENTS.md#requirements-sync-protocol). Nothing is written into, or copied out of, `../requirements/`.
 - New module requirement or flow → the relevant folder under `docs/product-knowledge/modules/`.
 - New reusable UI rule → `docs/rules/`.
 - Candidate visual direction that has not been approved → `docs/visual-references/`; do not implement it automatically.

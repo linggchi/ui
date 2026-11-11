@@ -123,21 +123,21 @@ const records: ActionRecord[] = [
     timeframe: "actions",
   },
   {
-    description: "Document Review and Approval Form",
+    description: "Document Control Requirements",
     dueDate: "2 Nov",
-    id: "ACME-FRM-2026-000005",
+    id: "ACME-URS-2026-000005",
     module: "Documents",
     priority: "Medium",
     status: "In Review",
     timeframe: "actions",
   },
   {
-    description: "Equipment Cleaning Work Instruction",
+    description: "Equipment Design Specification",
     dueDate: "3 Nov",
-    id: "ACME-WI-2026-000013",
+    id: "ACME-DS-2026-000013",
     module: "Documents",
     priority: "High",
-    status: "In QA Approval",
+    status: "In Approval",
     timeframe: "actions",
   },
   {
@@ -236,7 +236,7 @@ export function DashboardScreen({ onOpenDocuments }: DashboardScreenProps) {
         />
         <p>
           <span className="font-medium">Action required:</span> You have 18
-          overdue records, 11 waiting on your sign-off, and 1 due this week.
+          overdue records, 11 waiting on your approval, and 1 due this week.
         </p>
       </div>
 

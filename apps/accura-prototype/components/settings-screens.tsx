@@ -32,7 +32,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@coss/ui/components/empty";
-import { Field, FieldLabel } from "@coss/ui/components/field";
+import { Field } from "@coss/ui/components/field";
 import { Input } from "@coss/ui/components/input";
 import {
   InputGroup,
@@ -83,6 +83,12 @@ import {
 import { useMemo, useState } from "react";
 import { AccuraInformationPanel } from "./accura-information-panel";
 import { Tabs, TabsList, TabsPanel, TabsTab } from "./accura-tabs";
+import {
+  FormLabel,
+  RECESSED_INPUT,
+  SectionCard,
+  SectionHeading,
+} from "@/components/accura-form";
 
 type SettingsSection =
   | "asset-management"
@@ -118,7 +124,8 @@ type EditableUser = {
 type UserFormState = {
   departments: string[];
   email: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   role: string;
 };
 
@@ -294,8 +301,11 @@ const initialUsers: EditableUser[] = [
   },
 ];
 
-// Built-in document types from the mockup. The abbreviation drives Document ID
-// generation (e.g. SOP-001).
+// The twelve built-in document types enumerated by US-007 AC-01 and shown in the
+// mockup's Settings > Documents list. The mockup's Documents type filter offers
+// exactly these twelve and no others, so sample documents must use them. AC-03
+// lets an administrator add more at runtime; none are seeded.
+// The abbreviation drives Document ID generation (e.g. SOP-001).
 const documentTypes = [
   {
     abbreviation: "BR",
@@ -387,9 +397,21 @@ const statusBadgeVariant: Record<
 const emptyForm: UserFormState = {
   departments: [],
   email: "",
-  name: "",
+  firstName: "",
+  lastName: "",
   role: "",
 };
+
+// US-002 AC-01 captures First name and Last name, while the Users list and the
+// rest of the prototype show one display name. Split on the last space so a
+// multi-word given name stays in First name.
+function splitUserName(name: string) {
+  const trimmed = name.trim();
+  const cut = trimmed.lastIndexOf(" ");
+  return cut === -1
+    ? { firstName: trimmed, lastName: "" }
+    : { firstName: trimmed.slice(0, cut), lastName: trimmed.slice(cut + 1) };
+}
 
 function countLabel(count: number, noun: string) {
   return `${count} ${noun}${count === 1 ? "" : "s"}`;
@@ -397,34 +419,6 @@ function countLabel(count: number, noun: string) {
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-// One label convention for the whole form: a red asterisk marks required,
-// "(Optional)" marks the rest. Both sit in a single child so FieldLabel's
-// gap-2 does not push the marker away from the word it qualifies.
-function FormLabel({
-  children,
-  optional,
-}: {
-  children: React.ReactNode;
-  optional?: boolean;
-}) {
-  return (
-    <FieldLabel>
-      <span>
-        {children}
-        {optional ? (
-          <span className="ms-1 font-normal text-muted-foreground">
-            (Optional)
-          </span>
-        ) : (
-          <span aria-hidden="true" className="ms-0.5 text-destructive">
-            *
-          </span>
-        )}
-      </span>
-    </FieldLabel>
-  );
 }
 
 function getUserInitials(name: string) {
@@ -461,36 +455,6 @@ function UserIdentity({ user }: { user: EditableUser }) {
         </p>
       </div>
     </div>
-  );
-}
-
-function SectionHeading({
-  action,
-  description,
-  title,
-}: {
-  action?: React.ReactNode;
-  description: string;
-  title: string;
-}) {
-  return (
-    <div className="flex flex-wrap items-start justify-between gap-3 border-b bg-[var(--accura-zinc-50)] px-5 py-4">
-      <div className="flex flex-col gap-0.5">
-        <h2 className="font-bold text-base leading-tight">{title}</h2>
-        <p className="text-muted-foreground text-sm">{description}</p>
-      </div>
-      {action}
-    </div>
-  );
-}
-
-// One card per settings section: page canvas → card → table rows gives three
-// readable planes instead of headings and tables floating side by side.
-function SectionCard({ children }: { children: React.ReactNode }) {
-  return (
-    <section className="overflow-hidden rounded-xl border bg-card shadow-xs">
-      {children}
-    </section>
   );
 }
 
@@ -535,7 +499,7 @@ function RoleDetailsDialog({
               <Field>
                 <FormLabel>Role name</FormLabel>
                 <Input
-                  className="has-disabled:bg-[var(--accura-canvas)] has-disabled:opacity-100 has-disabled:*:text-muted-foreground"
+                  className={RECESSED_INPUT}
                   defaultValue={role.name}
                   disabled
                   key={`${role.name}-name`}
@@ -664,25 +628,39 @@ function UserFormDialog({
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogPopup className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit user" : "Invite user"}</DialogTitle>
+          <DialogTitle>{editing ? "Edit user" : "Add User"}</DialogTitle>
           <DialogDescription>
             {editing
-              ? "Update user details, departments, and role assignments."
-              : "Add a user and assign their roles."}
+              ? "Update user details, departments, and role."
+              : "Add a user and assign their role."}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel className="flex flex-col gap-4">
-          <Field>
-            <FormLabel>Full name</FormLabel>
-            <Input
-              onChange={(event) =>
-                setForm({ ...form, name: event.target.value })
-              }
-              placeholder="Enter full name"
-              type="text"
-              value={form.name}
-            />
-          </Field>
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <Field className="flex-1">
+              <FormLabel>First name</FormLabel>
+              <Input
+                onChange={(event) =>
+                  setForm({ ...form, firstName: event.target.value })
+                }
+                placeholder="Enter first name"
+                type="text"
+                value={form.firstName}
+              />
+            </Field>
+
+            <Field className="flex-1">
+              <FormLabel>Last name</FormLabel>
+              <Input
+                onChange={(event) =>
+                  setForm({ ...form, lastName: event.target.value })
+                }
+                placeholder="Enter last name"
+                type="text"
+                value={form.lastName}
+              />
+            </Field>
+          </div>
 
           <Field>
             <FormLabel>Email address</FormLabel>
@@ -692,7 +670,7 @@ function UserFormDialog({
               // dims it (opacity-64), so it reads as an empty enabled field;
               // Zinc 100 is the app's recessed plane, and full opacity keeps
               // the border crisp.
-              className="has-disabled:bg-[var(--accura-canvas)] has-disabled:opacity-100 has-disabled:*:text-muted-foreground"
+              className={RECESSED_INPUT}
               disabled={editing}
               onChange={(event) =>
                 setForm({ ...form, email: event.target.value })
@@ -802,7 +780,7 @@ function UserFormDialog({
           )}
 
           {!editing && (
-            <AccuraInformationPanel icon={MailIcon} title="Invitation email">
+            <AccuraInformationPanel icon={MailIcon} title="Invitation Email">
               After you send the invitation, the user receives a secure link to
               set up a password and then sign in.
             </AccuraInformationPanel>
@@ -811,7 +789,7 @@ function UserFormDialog({
         <DialogFooter>
           <DialogClose render={<Button variant="ghost" />}>Cancel</DialogClose>
           <Button onClick={onSubmit}>
-            {editing ? "Save changes" : "Send invitation"}
+            {editing ? "Save changes" : "Add User"}
           </Button>
         </DialogFooter>
       </DialogPopup>
@@ -879,7 +857,7 @@ export function SettingsScreen() {
     setForm({
       departments: [...user.departments],
       email: user.email,
-      name: user.name,
+      ...splitUserName(user.name),
       role: user.role,
     });
     setFormError(null);
@@ -887,31 +865,53 @@ export function SettingsScreen() {
   };
 
   const submitForm = () => {
-    const name = form.name.trim();
+    const firstName = form.firstName.trim();
+    const lastName = form.lastName.trim();
+    const name = `${firstName} ${lastName}`.trim();
     const email = form.email.trim();
 
-    if (!name) {
-      setFormError("Enter the user’s full name to continue.");
+    if (!firstName) {
+      setFormError("Enter the user’s first name to continue.");
       return;
     }
-    if (!isValidEmail(email)) {
-      setFormError("Enter a valid email address to continue.");
+    if (!lastName) {
+      setFormError("Enter the user’s last name to continue.");
       return;
     }
-    const duplicate = users.some(
-      (user) =>
-        user.email.toLowerCase() === email.toLowerCase() &&
-        user.id !== editingId,
-    );
-    if (duplicate) {
-      setFormError(
-        "Another user in this organisation already uses this email.",
+    // US-004 AC-01: the email address is read-only when editing, so format and
+    // uniqueness are validated on add only.
+    if (!editingId) {
+      if (!isValidEmail(email)) {
+        setFormError("Enter a valid email address to continue.");
+        return;
+      }
+      const duplicate = users.some(
+        (user) => user.email.toLowerCase() === email.toLowerCase(),
       );
-      return;
+      if (duplicate) {
+        setFormError(
+          "Another user in this organisation already uses this email.",
+        );
+        return;
+      }
     }
     if (!form.role) {
       setFormError("Select a role to continue.");
       return;
+    }
+    // US-004 AC-06: the organisation must keep at least one Admin.
+    if (editingId && form.role !== "Admin") {
+      const otherAdmins = users.some(
+        (user) => user.id !== editingId && user.role === "Admin",
+      );
+      const wasAdmin =
+        users.find((user) => user.id === editingId)?.role === "Admin";
+      if (wasAdmin && !otherAdmins) {
+        setFormError(
+          "This organisation must have at least one user with the Admin role.",
+        );
+        return;
+      }
     }
 
     const departments = [...form.departments];
@@ -1000,7 +1000,7 @@ export function SettingsScreen() {
                   usersTab === "users" ? (
                     <Button onClick={openInvite}>
                       <PlusIcon aria-hidden="true" />
-                      Invite user
+                      Add User
                     </Button>
                   ) : undefined
                 }
@@ -1261,7 +1261,7 @@ export function SettingsScreen() {
             <SectionCard>
               <SectionHeading
                 description="Document types, numbering, and review defaults. The abbreviation drives Document ID generation, for example SOP-001."
-                title="Document types"
+                title="Document Types"
               />
 
               <div className="flex flex-col">

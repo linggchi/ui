@@ -12,7 +12,6 @@ import {
   DialogPanel,
   DialogPopup,
   DialogTitle,
-  DialogTrigger,
 } from "@coss/ui/components/dialog";
 import {
   InputGroup,
@@ -27,7 +26,6 @@ import {
   MenuSeparator,
   MenuTrigger,
 } from "@coss/ui/components/menu";
-import { Radio, RadioGroup } from "@coss/ui/components/radio-group";
 import {
   Select,
   SelectItem,
@@ -80,7 +78,12 @@ import {
   Xmark as XIcon,
 } from "iconoir-react";
 import Image from "next/image";
+import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  CreateDocumentScreen,
+  type CreatedDocument,
+} from "./create-document-screen";
 import { DashboardScreen } from "./dashboard-screen";
 import {
   DocumentFlowScreen,
@@ -89,6 +92,76 @@ import {
 import { SettingsScreen } from "./settings-screens";
 
 type AppModule = "dashboard" | "documents" | "settings";
+
+/**
+ * A horizontally scrollable table whose trailing action column stays pinned.
+ *
+ * The register has more columns than a laptop viewport holds, and clipping
+ * them put Author and Effective date out of reach entirely. Scrolling brings
+ * them back, but a row's actions must not scroll away with them — so the
+ * action cell sticks to the trailing edge.
+ *
+ * At rest that cell shows nothing at all: raising it on every row drew a
+ * permanent band down the register and covered the Author column no one had
+ * asked it to cover. The action appears on the one row the pointer or keyboard
+ * is on, as a raised chip; the cell behind it only takes the row's hover
+ * surface, to mask the columns passing underneath.
+ *
+ * The elevation is on the chip, not on the cell. Spread across a full-height
+ * cell against a near-white row it measured correctly and could not be seen,
+ * twice. The header's trailing cell is not pinned at all — a header is never
+ * hovered and holds no action, so pinning it only clipped the last heading.
+ */
+function ScrollableTable({
+  children,
+}: {
+  children: (atEnd: boolean) => React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [atEnd, setAtEnd] = useState(true);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const update = () => {
+      const remaining =
+        element.scrollWidth -
+        element.clientWidth -
+        Math.abs(element.scrollLeft);
+      setAtEnd(remaining <= 1);
+    };
+
+    update();
+    element.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => {
+      element.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, []);
+
+  // The register has more columns than a laptop viewport holds. Scrolling
+  // keeps every column reachable, and the trailing action cell stays pinned so
+  // a row's actions never scroll out of reach. While there is more of the row
+  // to see it is a raised chip on the hovered or focused row, over a cell that
+  // masks what scrolls underneath. At the end of the row the actions sit in
+  // their own column with nothing behind them, so every row shows a plain one
+  // and the rows read as a register again — hence `atEnd` reaching the rows.
+  //
+  // `Table` renders its own `overflow-x-auto` container, which is neutralised
+  // here so this element is the single scroller whose state can be read.
+  return (
+    <div
+      className="overflow-x-auto [&>[data-slot=table-container]]:overflow-visible"
+      data-scroll-end={atEnd}
+      ref={ref}
+    >
+      <Table className="min-w-[1240px]">{children(atEnd)}</Table>
+    </div>
+  );
+}
 
 type DocumentStatus =
   | "Approved"
@@ -101,294 +174,423 @@ type DocumentStatus =
 type DocumentCategory = "Controlled" | "External";
 
 type DocumentRecord = {
+  // US-012 assigns an Approver alongside the Reviewers; US-013 acts on it.
+  approver?: string;
+  // US-011 AC-02 shows attachments and references on the detail screen. The
+  // mockup's own read-only panel carries exactly one document's content; the
+  // other ten rows were seeded in this repository on 2026-11-11 so that every
+  // status demonstrates the panel, and are not traceable to the mockup.
+  attachments?: { description: string; fileName: string; name: string }[];
   author: string;
   category: DocumentCategory;
-  department:
-    | "Engineering"
-    | "Manufacturing"
-    | "Quality Assurance"
-    | "Quality Control";
+  department: "Engineering" | "Manufacturing" | "Quality Control";
   effectiveDate: string | null;
   id: string;
   name: string;
+  related?: { id: string; name: string; version: string }[];
+  referred?: { id: string; name: string; version: string }[];
+  // US-012 AC-02: every assigned Reviewer must approve before the document
+  // moves to In Approval, so the route is per-reviewer, not a single flag.
+  reviewers?: { decision: "Approved" | "Pending"; name: string }[];
+  // US-015 AC-02: the change summary saved with this version.
+  revisionHistory?: string;
   status: DocumentStatus;
+  tags?: string[];
+  // The twelve document types configured in Settings (US-007 AC-01), written
+  // "Name (ABBR)" exactly as the mockup stores and renders them, so the column
+  // and the filter both carry the abbreviation that drives Document IDs.
   type:
-    | "Batch Record"
-    | "External"
-    | "Form"
-    | "Policy"
-    | "Procedure"
-    | "Specification"
-    | "SOP"
-    | "Work Instruction";
+    | "Batch Record (BR)"
+    | "Design Specification (DS)"
+    | "External Document (EXT)"
+    | "Functional Specification (FS)"
+    | "Material Specification (MS)"
+    | "Product Specification (PS)"
+    | "Record (REC)"
+    | "Report (REP)"
+    | "Template (TMP)"
+    | "Test Method (TM)"
+    | "User Requirements Specification (URS)"
+    | "Validation Master Plan (VMP)";
   version: string;
 };
 
 const documentsOnly = process.env.NEXT_PUBLIC_ACCURA_DOCUMENTS_ONLY === "true";
 
+// The eleven sample rows from the mockup's `documentRows`
+// (`01 Research/Accura Mockup.html`), kept verbatim apart from the project's
+// "9 Oct 2026" date format. They are the only traceable document sample: every
+// row uses one of the twelve configured types, and the two repeated Document IDs
+// are the same-ID version pairs US-006 AC-01 requires to group consecutively.
 const documents: DocumentRecord[] = [
   {
+    approver: "Nina Patel",
+    // The mockup's detail panel is this document. Its attachments, references
+    // and tags are the mockup's own, including both referenced documents,
+    // which are rows 7 and 8 below.
+    attachments: [
+      {
+        description: "Pre-use inspection checklist",
+        fileName: "Equipment-Checklist.pdf",
+        name: "Equipment checklist",
+      },
+      {
+        description: "Equipment handling risks",
+        fileName: "Risk-Assessment.xlsx",
+        name: "Risk assessment",
+      },
+    ],
+    author: "Amit Kothari",
+    category: "Controlled",
+    department: "Engineering",
+    effectiveDate: "9 Oct 2026",
+    id: "ACME-FRM-2026-000006",
+    name: "Equipment Introduction Form",
+    related: [
+      {
+        id: "ACME-DS-2026-000013",
+        name: "Equipment Design Specification",
+        version: "v1.0",
+      },
+    ],
+    referred: [
+      {
+        id: "ACME-FS-2026-000004",
+        name: "Data Integrity Functional Specification",
+        version: "v1.0",
+      },
+    ],
+    reviewers: [
+      { decision: "Approved", name: "Sarah Johnson" },
+      { decision: "Approved", name: "Priya Shah" },
+    ],
+    status: "Approved",
+    tags: ["Equipment", "Controlled"],
+    type: "Record (REC)",
+    version: "v1.0",
+  },
+  {
+    approver: "Nina Patel",
+    attachments: [
+      {
+        description: "What v2.0 changes against v1.0",
+        fileName: "URS-Change-Summary.docx",
+        name: "Change summary",
+      },
+    ],
     author: "Amit Kothari",
     category: "Controlled",
     department: "Quality Control",
     effectiveDate: null,
-    id: "ACME-BR-2026-000001",
-    name: "Batch Record – Line Clearance",
+    id: "ACME-URS-2026-000005",
+    name: "Document Control Requirements",
+    related: [
+      {
+        id: "ACME-DS-2026-000013",
+        name: "Equipment Design Specification",
+        version: "v1.0",
+      },
+    ],
+    referred: [
+      {
+        id: "ACME-FS-2026-000004",
+        name: "Data Integrity Functional Specification",
+        version: "v1.0",
+      },
+    ],
+    reviewers: [
+      { decision: "Approved", name: "Sarah Johnson" },
+      { decision: "Pending", name: "Priya Shah" },
+    ],
+    status: "In Review",
+    tags: ["Document control", "Requirements"],
+    type: "User Requirements Specification (URS)",
+    version: "v2.0",
+  },
+  {
+    approver: "Nina Patel",
+    attachments: [
+      {
+        description: "Signed-off requirements baseline",
+        fileName: "URS-Approval-Record.pdf",
+        name: "Approval record",
+      },
+    ],
+    author: "Amit Kothari",
+    category: "Controlled",
+    department: "Quality Control",
+    effectiveDate: "9 Oct 2026",
+    id: "ACME-URS-2026-000005",
+    name: "Document Control Requirements",
+    related: [
+      {
+        id: "ACME-FS-2026-000004",
+        name: "Data Integrity Functional Specification",
+        version: "v1.0",
+      },
+    ],
+    reviewers: [
+      { decision: "Approved", name: "Sarah Johnson" },
+      { decision: "Approved", name: "Priya Shah" },
+    ],
+    status: "Approved",
+    tags: ["Document control", "Requirements"],
+    type: "User Requirements Specification (URS)",
+    version: "v1.0",
+  },
+  {
+    approver: "Nina Patel",
+    attachments: [
+      {
+        description: "Qualification activities and owners",
+        fileName: "VMP-Schedule.xlsx",
+        name: "Validation schedule",
+      },
+      {
+        description: "Open validation risks",
+        fileName: "VMP-Risk-Log.xlsx",
+        name: "Risk log",
+      },
+    ],
+    author: "Amit Kothari",
+    category: "Controlled",
+    department: "Engineering",
+    effectiveDate: "28 Oct 2026",
+    id: "ACME-VMP-2026-000001",
+    name: "Equipment Validation Master Plan",
+    related: [
+      {
+        id: "ACME-FRM-2026-000006",
+        name: "Equipment Introduction Form",
+        version: "v1.0",
+      },
+    ],
+    referred: [
+      {
+        id: "ACME-DS-2026-000013",
+        name: "Equipment Design Specification",
+        version: "v1.0",
+      },
+    ],
+    reviewers: [
+      { decision: "Approved", name: "Sarah Johnson" },
+      { decision: "Approved", name: "Emily Chen" },
+    ],
+    status: "Approved",
+    tags: ["Validation", "Equipment"],
+    type: "Validation Master Plan (VMP)",
+    version: "v3.0",
+  },
+  {
+    approver: "Nina Patel",
+    attachments: [
+      {
+        description: "Superseded by v3.0",
+        fileName: "VMP-Schedule-v2.xlsx",
+        name: "Validation schedule",
+      },
+    ],
+    author: "Amit Kothari",
+    category: "Controlled",
+    department: "Engineering",
+    effectiveDate: "5 Oct 2026",
+    id: "ACME-VMP-2026-000001",
+    name: "Equipment Validation Master Plan",
+    related: [
+      {
+        id: "ACME-FRM-2026-000006",
+        name: "Equipment Introduction Form",
+        version: "v1.0",
+      },
+    ],
+    reviewers: [
+      { decision: "Approved", name: "Sarah Johnson" },
+      { decision: "Approved", name: "Emily Chen" },
+    ],
+    status: "Superseded",
+    tags: ["Validation", "Equipment"],
+    type: "Validation Master Plan (VMP)",
+    version: "v2.0",
+  },
+  {
+    approver: "Nina Patel",
+    attachments: [
+      {
+        description: "Blank record for each run",
+        fileName: "Batch-Template.docx",
+        name: "Batch template",
+      },
+    ],
+    author: "Amit Kothari",
+    category: "Controlled",
+    department: "Quality Control",
+    effectiveDate: null,
+    id: "BR-2026-000001",
+    name: "Laboratory Batch Record",
+    related: [
+      {
+        id: "ACME-MS-2026-000006",
+        name: "Raw Material Specification",
+        version: "v1.0",
+      },
+    ],
+    reviewers: [
+      { decision: "Pending", name: "Sarah Johnson" },
+      { decision: "Pending", name: "Priya Shah" },
+    ],
     status: "Draft",
-    type: "Batch Record",
+    tags: ["Batch record", "Laboratory"],
+    type: "Batch Record (BR)",
     version: "v1.0",
   },
   {
+    approver: "Nina Patel",
+    attachments: [
+      {
+        description: "General arrangement and interfaces",
+        fileName: "DS-Drawings.pdf",
+        name: "Design drawings",
+      },
+    ],
     author: "Amit Kothari",
     category: "Controlled",
     department: "Quality Control",
     effectiveDate: null,
-    id: "ACME-WI-2026-000013",
-    name: "Equipment Cleaning Work Instruction",
+    id: "ACME-DS-2026-000013",
+    name: "Equipment Design Specification",
+    related: [
+      {
+        id: "ACME-URS-2026-000005",
+        name: "Document Control Requirements",
+        version: "v1.0",
+      },
+    ],
+    referred: [
+      {
+        id: "ACME-VMP-2026-000001",
+        name: "Equipment Validation Master Plan",
+        version: "v3.0",
+      },
+    ],
+    reviewers: [
+      { decision: "Approved", name: "Sarah Johnson" },
+      { decision: "Approved", name: "Ravi Patel" },
+    ],
     status: "In Approval",
-    type: "Work Instruction",
+    tags: ["Design", "Equipment"],
+    type: "Design Specification (DS)",
     version: "v1.0",
   },
   {
+    approver: "Nina Patel",
+    attachments: [
+      {
+        description: "Requirements to functions",
+        fileName: "FS-Traceability.xlsx",
+        name: "Traceability matrix",
+      },
+    ],
+    author: "Sarah Johnson",
+    category: "Controlled",
+    department: "Quality Control",
+    effectiveDate: "13 Oct 2026",
+    id: "ACME-FS-2026-000004",
+    name: "Data Integrity Functional Specification",
+    related: [
+      {
+        id: "ACME-URS-2026-000005",
+        name: "Document Control Requirements",
+        version: "v1.0",
+      },
+    ],
+    reviewers: [
+      { decision: "Approved", name: "Priya Shah" },
+      { decision: "Approved", name: "Ravi Patel" },
+    ],
+    status: "Approved",
+    tags: ["Data integrity", "Functional"],
+    type: "Functional Specification (FS)",
+    version: "v1.0",
+  },
+  {
+    approver: "Nina Patel",
+    attachments: [
+      {
+        description: "Acceptance criteria per attribute",
+        fileName: "MS-Test-Limits.pdf",
+        name: "Test limits",
+      },
+    ],
     author: "Amit Kothari",
     category: "Controlled",
     department: "Quality Control",
     effectiveDate: "13 Oct 2026",
-    id: "ACME-FRM-2026-000006",
-    name: "Equipment Introduction Form",
+    id: "ACME-MS-2026-000006",
+    name: "Raw Material Specification",
+    related: [
+      {
+        id: "ACME-TM-2026-000014",
+        name: "Cleaning Validation Test Method",
+        version: "v1.0",
+      },
+    ],
+    reviewers: [
+      { decision: "Approved", name: "Emily Chen" },
+      { decision: "Approved", name: "Ravi Patel" },
+    ],
     status: "Approved",
-    type: "Form",
+    tags: ["Material", "Specification"],
+    type: "Material Specification (MS)",
     version: "v1.0",
   },
   {
-    author: "Amit Kothari",
-    category: "Controlled",
-    department: "Quality Assurance",
-    effectiveDate: null,
-    id: "ACME-FRM-2026-000005",
-    name: "Document Review and Approval Form",
-    status: "In Review",
-    type: "Form",
-    version: "v2.0",
-  },
-  {
-    author: "Amit Kothari",
-    category: "Controlled",
-    department: "Quality Assurance",
-    effectiveDate: "2 Aug 2025",
-    id: "ACME-FRM-2026-000005",
-    name: "Document Review and Approval Form",
-    status: "Superseded",
-    type: "Form",
-    version: "v1.0",
-  },
-  {
-    author: "Nina Patel",
-    category: "Controlled",
-    department: "Quality Assurance",
-    effectiveDate: "11 Oct 2026",
-    id: "ACME-SPEC-2026-000004",
-    name: "eQMS Roles and Permissions Model",
-    status: "Approved",
-    type: "Specification",
-    version: "v1.0",
-  },
-  {
-    author: "Daniel Lee",
-    category: "Controlled",
-    department: "Engineering",
-    effectiveDate: null,
-    id: "ACME-PRO-2026-000001",
-    name: "Equipment Installation Qualification Protocol",
-    status: "In Review",
-    type: "Procedure",
-    version: "v2.0",
-  },
-  {
-    author: "Nina Patel",
-    category: "Controlled",
-    department: "Quality Control",
-    effectiveDate: "9 Oct 2026",
-    id: "ACME-FRM-2026-000011",
-    name: "Quality Event Assessment Form",
-    status: "Approved",
-    type: "Form",
-    version: "v1.0",
-  },
-  {
-    author: "Daniel Lee",
-    category: "Controlled",
-    department: "Engineering",
-    effectiveDate: "5 Oct 2026",
-    id: "ACME-PRO-2026-000008",
-    name: "Equipment Operational Qualification Protocol",
-    status: "Approved",
-    type: "Procedure",
-    version: "v1.0",
-  },
-  {
-    author: "Chau Nguyen",
-    category: "Controlled",
-    department: "Engineering",
-    effectiveDate: null,
-    id: "ACME-POL-2026-000004",
-    name: "Hardware Story Splitting Policy",
-    status: "In Review",
-    type: "Policy",
-    version: "v1.0",
-  },
-  {
-    author: "Nina Patel",
-    category: "Controlled",
+    attachments: [
+      {
+        description: "Supplier-issued, superseded lot",
+        fileName: "CoA-Reagent-Lot-88421.pdf",
+        name: "Certificate of analysis",
+      },
+    ],
+    author: "James O’Brien",
+    category: "External",
     department: "Manufacturing",
     effectiveDate: "4 Oct 2026",
-    id: "ACME-SOP-2026-000016",
-    name: "Sample Management",
-    status: "Approved",
-    type: "SOP",
-    version: "v1.0",
-  },
-  {
-    author: "Daniel Lee",
-    category: "Controlled",
-    department: "Manufacturing",
-    effectiveDate: null,
-    id: "ACME-WI-2026-000019",
-    name: "Material Receipt and Inspection",
-    status: "Draft",
-    type: "Work Instruction",
-    version: "v1.0",
-  },
-  {
-    author: "Chau Nguyen",
-    category: "Controlled",
-    department: "Quality Assurance",
-    effectiveDate: null,
-    id: "ACME-SOP-2026-000021",
-    name: "Controlled Document Lifecycle",
-    status: "In Approval",
-    type: "SOP",
-    version: "v1.0",
-  },
-  {
-    author: "Nina Patel",
-    category: "Controlled",
-    department: "Quality Control",
-    effectiveDate: "30 Sep 2026",
-    id: "ACME-SPEC-2026-000010",
-    name: "Environmental Monitoring Limits",
-    status: "Approved",
-    type: "Specification",
-    version: "v3.0",
-  },
-  {
-    author: "Nina Patel",
-    category: "Controlled",
-    department: "Quality Control",
-    effectiveDate: "18 Mar 2025",
-    id: "ACME-SPEC-2026-000010",
-    name: "Environmental Monitoring Limits",
-    status: "Superseded",
-    type: "Specification",
-    version: "v2.0",
-  },
-  {
-    author: "Amit Kothari",
-    category: "Controlled",
-    department: "Manufacturing",
-    effectiveDate: null,
-    id: "ACME-BR-2026-000014",
-    name: "Packaging Batch Record",
-    status: "Draft",
-    type: "Batch Record",
-    version: "v1.0",
-  },
-  {
-    author: "Daniel Lee",
-    category: "Controlled",
-    department: "Engineering",
-    effectiveDate: "28 Sep 2026",
-    id: "ACME-SOP-2026-000018",
-    name: "Preventive Maintenance",
-    status: "Approved",
-    type: "SOP",
-    version: "v2.0",
-  },
-  {
-    author: "Chau Nguyen",
-    category: "Controlled",
-    department: "Quality Assurance",
-    effectiveDate: null,
-    id: "ACME-POL-2026-000009",
-    name: "Data Integrity and Retention",
-    status: "In Review",
-    type: "Policy",
-    version: "v1.0",
-  },
-  {
-    author: "Nina Patel",
-    category: "Controlled",
-    department: "Quality Control",
-    effectiveDate: "24 Sep 2026",
-    id: "ACME-WI-2026-000025",
-    name: "Analytical Balance Verification",
-    status: "Approved",
-    type: "Work Instruction",
-    version: "v1.0",
-  },
-  {
-    author: "Amit Kothari",
-    category: "Controlled",
-    department: "Quality Assurance",
-    effectiveDate: null,
-    id: "ACME-FRM-2026-000027",
-    name: "Change Impact Assessment",
-    status: "Draft",
-    type: "Form",
-    version: "v1.0",
-  },
-  {
-    author: "Chau Nguyen",
-    category: "Controlled",
-    department: "Manufacturing",
-    effectiveDate: "14 Jan 2024",
-    id: "ACME-SOP-2024-000002",
-    name: "Legacy Gowning and Aseptic Technique",
+    id: "ACME-EXT-2026-000016",
+    name: "Supplier Certificate of Analysis",
     status: "Obsolete",
-    type: "SOP",
+    tags: ["Supplier", "Certificate"],
+    type: "External Document (EXT)",
     version: "v1.0",
   },
   {
-    author: "Nina Patel",
-    category: "External",
-    department: "Quality Assurance",
-    effectiveDate: "1 Oct 2026",
-    id: "ACME-EXT-2026-000003",
-    name: "ISO 13485:2016 — Medical Devices QMS",
-    status: "Approved",
-    type: "External",
-    version: "v1.0",
-  },
-  {
-    author: "Amit Kothari",
-    category: "External",
-    department: "Quality Control",
-    effectiveDate: "22 Sep 2026",
-    id: "ACME-EXT-2026-000007",
-    name: "Supplier Certificate of Analysis — Reagent Lot 88421",
-    status: "Approved",
-    type: "External",
-    version: "v1.0",
-  },
-  {
-    author: "Nina Patel",
-    category: "External",
-    department: "Quality Assurance",
-    effectiveDate: "12 Sep 2026",
-    id: "ACME-EXT-2026-000012",
-    name: "FDA 21 CFR Part 11 — Electronic Records Guidance",
-    status: "Approved",
-    type: "External",
+    approver: "Nina Patel",
+    attachments: [
+      {
+        description: "Swab recovery per surface",
+        fileName: "TM-Recovery-Study.xlsx",
+        name: "Recovery study",
+      },
+    ],
+    author: "Sarah Johnson",
+    category: "Controlled",
+    department: "Manufacturing",
+    effectiveDate: null,
+    id: "ACME-TM-2026-000014",
+    name: "Cleaning Validation Test Method",
+    related: [
+      {
+        id: "ACME-VMP-2026-000001",
+        name: "Equipment Validation Master Plan",
+        version: "v3.0",
+      },
+    ],
+    reviewers: [
+      { decision: "Pending", name: "Amit Kothari" },
+      { decision: "Pending", name: "Emily Chen" },
+    ],
+    status: "In Review",
+    tags: ["Cleaning", "Validation"],
+    type: "Test Method (TM)",
     version: "v1.0",
   },
 ];
@@ -426,11 +628,47 @@ const statusOptions = [
   { label: "Obsolete", value: "Obsolete" },
 ];
 
+// US-006 AC-03: the type filter loads from the configured list in
+// Settings > Documents, not from whatever the current rows happen to use, so an
+// unused type is still offered. These are the twelve of US-007 AC-01, in the
+// order the mockup's `docTypeFilter` lists them. Keep in step with
+// `documentTypes` in `settings-screens.tsx`, which holds the same twelve with
+// their abbreviations and descriptions.
+const configuredDocumentTypes: DocumentRecord["type"][] = [
+  "Batch Record (BR)",
+  "Design Specification (DS)",
+  "External Document (EXT)",
+  "Functional Specification (FS)",
+  "Material Specification (MS)",
+  "Product Specification (PS)",
+  "Record (REC)",
+  "Report (REP)",
+  "Template (TMP)",
+  "Test Method (TM)",
+  "User Requirements Specification (URS)",
+  "Validation Master Plan (VMP)",
+];
+
+// US-007 AC-03: the saved document joins the list as v1.0 with the signed-in
+// user as Author and no effective date until it is approved.
+function toRecord(created: CreatedDocument): DocumentRecord {
+  return {
+    author: "Amit Kothari",
+    category:
+      created.type === "External Document (EXT)" ? "External" : "Controlled",
+    department: created.department as DocumentRecord["department"],
+    effectiveDate: created.effectiveDate,
+    id: created.documentId,
+    name: created.name,
+    status: created.status,
+    type: created.type as DocumentRecord["type"],
+    version: "v1.0",
+  };
+}
+
 const typeOptions = [
   { label: "All types", value: "all" },
-  ...Array.from(new Set(documents.map((document) => document.type))).map(
-    (value) => ({ label: value, value }),
-  ),
+  ...configuredDocumentTypes.map((value) => ({ label: value, value })),
 ];
 
 const departmentOptions = [
@@ -641,11 +879,23 @@ export function DocumentsPrototype() {
   const [department, setDepartment] = useState("all");
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [documentKind, setDocumentKind] = useState("controlled");
   const [selectedDocument, setSelectedDocument] =
     useState<DocumentRecord | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Which row's action menu is open. The menu popup is portalled out of the
+  // table, so once it opens the pointer has left the row and focus sits inside
+  // the portal: neither :hover nor :focus-within still describes the row, and
+  // without this the chip and its masking cell both vanish behind the open menu.
+  // The row whose details are open, so the detail screen can render it.
+  const [openedDocument, setOpenedDocument] = useState<DocumentRecord | null>(
+    null,
+  );
+
+  const [openMenuRow, setOpenMenuRow] = useState<string | null>(null);
+
+  // US-007 AC-03 saves the new document and returns to the list, so the rows
+  // are state rather than the module-level sample array.
+  const [records, setRecords] = useState<DocumentRecord[]>(documents);
   const [activeView, setActiveView] = useState<"list" | DocumentFlowView>(
     "list",
   );
@@ -669,7 +919,7 @@ export function DocumentsPrototype() {
 
   const filteredDocuments = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return documents.filter((document) => {
+    return records.filter((document) => {
       const matchesQuery =
         normalizedQuery.length === 0 ||
         [document.id, document.name, document.author].some((value) =>
@@ -682,7 +932,7 @@ export function DocumentsPrototype() {
         (department === "all" || document.department === department)
       );
     });
-  }, [department, query, status, type]);
+  }, [department, query, records, status, type]);
 
   // Each row is one saved version. Keep versions of the same Document ID
   // consecutive (US-006 AC-01), newest version first within each family,
@@ -732,11 +982,75 @@ export function DocumentsPrototype() {
     window.scrollTo({ top: 0 });
   };
 
+  // US-011 AC-01: the details open *for that document*. Until 2026-11-11 this
+  // routed by status and then dropped the record, so every row opened the same
+  // hard-coded sample.
+  /**
+   * The detail screens change the record, not just the view: `US-013` sets the
+   * Effective Date on approval, `US-014` saves Draft edits, `US-015` adds a new
+   * version and `US-016` marks one Obsolete. Until 2026-11-11 the flow screens
+   * could only change which view was shown, so every transition was undone by
+   * going back to the register.
+   */
+  const sameVersion = (record: DocumentRecord, target: DocumentRecord) =>
+    record.id === target.id && record.version === target.version;
+
+  const patchOpenedDocument = (patch: Partial<DocumentRecord>) => {
+    const target = openedDocument;
+    if (!target) return;
+    const next = { ...target, ...patch };
+    setOpenedDocument(next);
+    setRecords((current) =>
+      current.map((record) => (sameVersion(record, target) ? next : record)),
+    );
+  };
+
+  /**
+   * `US-013` AC-02 and `US-015` AC-04: approving sets the Effective Date to 10
+   * days after approval, and any earlier Approved version of the same document
+   * becomes Superseded at that moment — not before.
+   */
+  const approveOpenedDocument = (effectiveDate: string) => {
+    const target = openedDocument;
+    if (!target) return;
+    const next = {
+      ...target,
+      effectiveDate,
+      status: "Approved" as DocumentStatus,
+    };
+    setOpenedDocument(next);
+    setRecords((current) =>
+      current.map((record) => {
+        if (sameVersion(record, target)) return next;
+        if (
+          record.id === target.id &&
+          record.status === "Approved" &&
+          record.version.localeCompare(target.version, undefined, {
+            numeric: true,
+          }) < 0
+        ) {
+          return { ...record, status: "Superseded" as DocumentStatus };
+        }
+        return record;
+      }),
+    );
+  };
+
+  /** `US-015` AC-02: the revision is a new row, and it opens as the Draft. */
+  const createRevision = (revision: DocumentRecord) => {
+    setRecords((current) => [revision, ...current]);
+    setOpenedDocument(revision);
+    navigateToView("draft");
+  };
+
   const openDocument = (document: DocumentRecord) => {
     setActiveModule("documents");
+    setOpenedDocument(document);
     if (document.status === "Draft") navigateToView("draft");
     else if (document.status === "In Review") navigateToView("review");
     else if (document.status === "In Approval") navigateToView("qa");
+    else if (document.status === "Superseded") navigateToView("superseded");
+    else if (document.status === "Obsolete") navigateToView("obsolete");
     else navigateToView("approved");
     setSelectedDocument(null);
   };
@@ -834,72 +1148,10 @@ export function DocumentsPrototype() {
                   </p>
                 </div>
 
-                <Dialog onOpenChange={setCreateOpen} open={createOpen}>
-                  <DialogTrigger
-                    onClick={() => setCreateOpen(true)}
-                    render={<Button size="lg" />}
-                  >
-                    <PlusIcon aria-hidden="true" />
-                    Create document
-                  </DialogTrigger>
-                  <DialogPopup className="sm:max-w-xl">
-                    <DialogHeader>
-                      <DialogTitle>Create a document</DialogTitle>
-                      <DialogDescription>
-                        Choose the lifecycle that applies. You can complete
-                        metadata and routing in the next step.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <DialogPanel>
-                      <RadioGroup
-                        aria-label="Document category"
-                        onValueChange={(value) =>
-                          setDocumentKind(String(value))
-                        }
-                        value={documentKind}
-                      >
-                        <label className="flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors hover:bg-secondary/72 has-[[data-checked]]:border-primary/32 has-[[data-checked]]:bg-secondary">
-                          <Radio value="controlled" />
-                          <span className="flex flex-col gap-1">
-                            <span className="font-medium text-sm">
-                              Controlled document
-                            </span>
-                            <span className="text-muted-foreground text-sm">
-                              Formal review, QA approval, version control, and
-                              effective-date management.
-                            </span>
-                          </span>
-                        </label>
-                        <label className="flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors hover:bg-secondary/72 has-[[data-checked]]:border-primary/32 has-[[data-checked]]:bg-secondary">
-                          <Radio value="external" />
-                          <span className="flex flex-col gap-1">
-                            <span className="font-medium text-sm">
-                              External document
-                            </span>
-                            <span className="text-muted-foreground text-sm">
-                              Reference material originating outside the
-                              organization.
-                            </span>
-                          </span>
-                        </label>
-                      </RadioGroup>
-                    </DialogPanel>
-                    <DialogFooter>
-                      <DialogClose render={<Button variant="ghost" />}>
-                        Cancel
-                      </DialogClose>
-                      <Button
-                        onClick={() => {
-                          setCreateOpen(false);
-                          navigateToView("create");
-                        }}
-                      >
-                        Continue
-                        <ChevronRightIcon aria-hidden="true" />
-                      </Button>
-                    </DialogFooter>
-                  </DialogPopup>
-                </Dialog>
+                <Button onClick={() => navigateToView("create")} size="lg">
+                  <PlusIcon aria-hidden="true" />
+                  Create document
+                </Button>
               </div>
 
               {notice && (
@@ -1026,151 +1278,211 @@ export function DocumentsPrototype() {
                 aria-label="Documents table"
                 className="overflow-hidden rounded-xl border bg-card shadow-xs"
               >
-                <Table>
-                  <TableHeader className="bg-secondary/72">
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-[200px] ps-4 text-xs">
-                        Document ID
-                      </TableHead>
-                      <TableHead className="min-w-[260px] text-xs">
-                        Name
-                      </TableHead>
-                      <TableHead className="w-[132px] text-xs">
-                        Status
-                      </TableHead>
-                      <TableHead className="w-[96px] text-xs max-[1240px]:hidden">
-                        Version
-                      </TableHead>
-                      <TableHead className="w-[124px] text-xs max-[920px]:hidden">
-                        Category
-                      </TableHead>
-                      <TableHead className="w-[150px] text-xs max-[1120px]:hidden">
-                        Document type
-                      </TableHead>
-                      <TableHead className="w-[170px] text-xs max-[1380px]:hidden">
-                        Department
-                      </TableHead>
-                      <TableHead className="w-[150px] text-xs max-[1520px]:hidden">
-                        Author
-                      </TableHead>
-                      <TableHead className="w-[140px] text-xs max-[1240px]:hidden">
-                        Effective date
-                      </TableHead>
-                      <TableHead className="w-12 pe-3 text-right text-xs">
-                        <span className="sr-only">Actions</span>
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {visibleDocuments.length > 0 ? (
-                      visibleDocuments.map((document) => (
-                        <TableRow
-                          key={`${document.id}-${document.version}`}
-                          className="hover:bg-secondary/48"
-                        >
-                          <TableCell className="ps-4">
-                            <span className="identifier text-muted-foreground text-xs">
-                              {document.id}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <button
-                              className="max-w-[420px] truncate text-left font-medium text-foreground outline-none transition-colors hover:text-primary hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring"
-                              onClick={() => openDocument(document)}
-                              type="button"
-                            >
-                              {document.name}
-                            </button>
-                            <p className="mt-1 text-muted-foreground text-xs min-[920px]:hidden">
-                              {document.category} · {document.type} ·{" "}
-                              {document.version}
-                            </p>
-                          </TableCell>
-                          <TableCell>
-                            <StatusBadge status={document.status} />
-                          </TableCell>
-                          <TableCell className="max-[1240px]:hidden">
-                            <span className="identifier">
-                              {document.version}
-                            </span>
-                          </TableCell>
-                          <TableCell className="max-[920px]:hidden">
-                            <Badge variant="outline">{document.category}</Badge>
-                          </TableCell>
-                          <TableCell className="max-[1120px]:hidden">
-                            {document.type}
-                          </TableCell>
-                          <TableCell className="max-[1380px]:hidden">
-                            {document.department}
-                          </TableCell>
-                          <TableCell className="max-[1520px]:hidden">
-                            {document.author}
-                          </TableCell>
-                          <TableCell className="max-[1240px]:hidden">
-                            {document.effectiveDate ?? "—"}
-                          </TableCell>
-                          <TableCell className="pe-3 text-right">
-                            <Menu>
-                              <MenuTrigger
-                                render={
-                                  <Button
-                                    aria-label={`Actions for ${document.name}`}
-                                    size="icon-sm"
-                                    variant="ghost"
-                                  />
-                                }
-                              >
-                                <MoreHorizontalIcon aria-hidden="true" />
-                              </MenuTrigger>
-                              <MenuPopup align="end">
-                                <MenuItem
-                                  onClick={() => setSelectedDocument(document)}
-                                >
-                                  <FileTextIcon aria-hidden="true" />
-                                  View details
-                                </MenuItem>
-                                <MenuItem>
-                                  <FileClockIcon aria-hidden="true" />
-                                  Version history
-                                </MenuItem>
-                                <MenuSeparator />
-                                <MenuItem>
-                                  <UserRoundIcon aria-hidden="true" />
-                                  View owner
-                                </MenuItem>
-                              </MenuPopup>
-                            </Menu>
-                          </TableCell>
+                <ScrollableTable>
+                  {(atEnd) => (
+                    <>
+                      <TableHeader className="bg-[var(--accura-zinc-50)]">
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="w-[220px] ps-4 text-xs">
+                            Document ID
+                          </TableHead>
+                          <TableHead className="min-w-[240px] text-xs">
+                            Name
+                          </TableHead>
+                          <TableHead className="w-[132px] text-xs">
+                            Status
+                          </TableHead>
+                          <TableHead className="w-[96px] text-xs">
+                            Version
+                          </TableHead>
+                          <TableHead className="w-[124px] text-xs">
+                            Category
+                          </TableHead>
+                          <TableHead className="w-[150px] text-xs">
+                            Document type
+                          </TableHead>
+                          <TableHead className="w-[170px] text-xs">
+                            Department
+                          </TableHead>
+                          <TableHead className="w-[150px] text-xs">
+                            Author
+                          </TableHead>
+                          <TableHead className="w-[140px] text-xs">
+                            Effective date
+                          </TableHead>
+                          <TableHead className="w-14 pe-3 text-right text-xs">
+                            <span className="sr-only">Actions</span>
+                          </TableHead>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell className="h-64 text-center" colSpan={10}>
-                          <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
-                            <div className="flex size-10 items-center justify-center rounded-full bg-muted">
-                              <FileSearchIcon
-                                aria-hidden="true"
-                                className="size-5 text-muted-foreground"
-                              />
-                            </div>
-                            <p className="font-medium">No documents found</p>
-                            <p className="text-muted-foreground text-sm">
-                              Adjust your search or clear the current filters.
-                            </p>
-                            <Button
-                              className="mt-2"
-                              onClick={clearFilters}
-                              size="sm"
-                              variant="outline"
+                      </TableHeader>
+                      <TableBody>
+                        {visibleDocuments.length > 0 ? (
+                          visibleDocuments.map((document) => {
+                            const rowKey = `${document.id}-${document.version}`;
+                            const menuOpen = openMenuRow === rowKey;
+
+                            return (
+                              <TableRow
+                                key={rowKey}
+                                className={`group hover:bg-secondary/48 ${
+                                  menuOpen ? "bg-secondary/48" : ""
+                                }`}
+                              >
+                                <TableCell className="ps-4">
+                                  {/* The Document ID is the row's link, so it
+                                      carries a link colour at rest rather than
+                                      the foreground every other cell uses.
+                                      `--primary` is too close to the body text
+                                      at this size to read as anything; Brand
+                                      900 is a clear hue shift and still 7.7:1
+                                      on white. */}
+                                  <button
+                                    className="identifier block max-w-[196px] truncate text-left font-medium text-[var(--accura-brand-900)] text-sm underline decoration-transparent underline-offset-2 outline-none transition-colors hover:decoration-current focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring"
+                                    onClick={() => openDocument(document)}
+                                    title={document.id}
+                                    type="button"
+                                  >
+                                    {document.id}
+                                  </button>
+                                </TableCell>
+                                <TableCell>
+                                  <span
+                                    className="block max-w-[240px] truncate"
+                                    title={document.name}
+                                  >
+                                    {document.name}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <StatusBadge status={document.status} />
+                                </TableCell>
+                                <TableCell>
+                                  <span className="identifier">
+                                    {document.version}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">
+                                    {document.category}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <span
+                                    className="block max-w-[150px] truncate"
+                                    title={document.type}
+                                  >
+                                    {document.type}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <span
+                                    className="block max-w-[170px] truncate"
+                                    title={document.department}
+                                  >
+                                    {document.department}
+                                  </span>
+                                </TableCell>
+                                <TableCell>{document.author}</TableCell>
+                                <TableCell>
+                                  {document.effectiveDate ?? "—"}
+                                </TableCell>
+                                <TableCell
+                                  className={`sticky end-0 pe-3 text-right transition-colors duration-150 ${
+                                    atEnd
+                                      ? "bg-transparent"
+                                      : menuOpen
+                                        ? "bg-[var(--accura-zinc-50)]"
+                                        : "bg-transparent group-hover:bg-[var(--accura-zinc-50)] group-has-[:focus-visible]:bg-[var(--accura-zinc-50)]"
+                                  }`}
+                                >
+                                  <Menu
+                                    onOpenChange={(open) =>
+                                      setOpenMenuRow(open ? rowKey : null)
+                                    }
+                                  >
+                                    <span
+                                      className={`inline-flex transition-opacity duration-150 ${
+                                        atEnd
+                                          ? "opacity-100"
+                                          : `rounded-lg border border-border bg-card shadow-[0_1px_2px_0_--theme(--color-black/8%),0_4px_10px_-2px_--theme(--color-black/16%),0_12px_24px_-8px_--theme(--color-black/28%)] ${
+                                              menuOpen
+                                                ? "opacity-100"
+                                                : "opacity-0 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100"
+                                            }`
+                                      }`}
+                                    >
+                                      <MenuTrigger
+                                        render={
+                                          <Button
+                                            aria-label={`Actions for ${document.name}`}
+                                            size="icon-sm"
+                                            variant="ghost"
+                                          />
+                                        }
+                                      >
+                                        <MoreHorizontalIcon aria-hidden="true" />
+                                      </MenuTrigger>
+                                    </span>
+                                    <MenuPopup align="end">
+                                      <MenuItem
+                                        onClick={() =>
+                                          setSelectedDocument(document)
+                                        }
+                                      >
+                                        <FileTextIcon aria-hidden="true" />
+                                        View details
+                                      </MenuItem>
+                                      <MenuItem>
+                                        <FileClockIcon aria-hidden="true" />
+                                        Version history
+                                      </MenuItem>
+                                      <MenuSeparator />
+                                      <MenuItem>
+                                        <UserRoundIcon aria-hidden="true" />
+                                        View owner
+                                      </MenuItem>
+                                    </MenuPopup>
+                                  </Menu>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        ) : (
+                          <TableRow>
+                            <TableCell
+                              className="h-64 text-center"
+                              colSpan={10}
                             >
-                              Clear filters
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                              <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
+                                <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+                                  <FileSearchIcon
+                                    aria-hidden="true"
+                                    className="size-5 text-muted-foreground"
+                                  />
+                                </div>
+                                <p className="font-medium">
+                                  No documents found
+                                </p>
+                                <p className="text-muted-foreground text-sm">
+                                  Adjust your search or clear the current
+                                  filters.
+                                </p>
+                                <Button
+                                  className="mt-2"
+                                  onClick={clearFilters}
+                                  size="sm"
+                                  variant="outline"
+                                >
+                                  Clear filters
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </>
+                  )}
+                </ScrollableTable>
               </section>
 
               <footer className="flex flex-wrap items-center justify-between gap-3">
@@ -1248,10 +1560,53 @@ export function DocumentsPrototype() {
                 </nav>
               </footer>
             </div>
+          ) : activeView === "create" ? (
+            <CreateDocumentScreen
+              nextSequence={records.length + 1}
+              onBack={() => navigateToView("list")}
+              onSaved={(created) => {
+                setRecords((current) => [toRecord(created), ...current]);
+                setNotice(
+                  created.status === "Approved"
+                    ? `${created.documentId} registered as Approved, effective ${created.effectiveDate}. Version v1.0 assigned.`
+                    : `${created.documentId} saved as ${created.status}. Version v1.0 assigned.`,
+                );
+                setQuery("");
+                setStatus("all");
+                setType("all");
+                setDepartment("all");
+                setPage(1);
+                navigateToView("list");
+              }}
+            />
           ) : (
             <DocumentFlowScreen
-              documentKind={documentKind}
+              document={openedDocument ?? records[0]}
+              onApprove={approveOpenedDocument}
               onBack={() => navigateToView("list")}
+              onCreateRevision={(revision) =>
+                createRevision(revision as DocumentRecord)
+              }
+              onNotice={setNotice}
+              onOpenReference={(reference) => {
+                // US-011 AC-02: a reference is a link. It opens the version it
+                // names, or the newest one carrying that ID if that exact
+                // version is no longer in the register.
+                const target =
+                  records.find(
+                    (record) =>
+                      record.id === reference.id &&
+                      record.version === reference.version,
+                  ) ?? records.find((record) => record.id === reference.id);
+                if (target) openDocument(target);
+                else
+                  setNotice(
+                    `${reference.id} ${reference.version} is no longer in the register.`,
+                  );
+              }}
+              onPatch={(patch) =>
+                patchOpenedDocument(patch as Partial<DocumentRecord>)
+              }
               onViewChange={navigateToView}
               view={activeView}
             />

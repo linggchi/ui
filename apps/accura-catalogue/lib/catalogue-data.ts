@@ -272,6 +272,7 @@ export const entries: CatalogueEntry[] = [
     group: "components",
     id: "badges",
     rules: [
+      "One size across the product: 22px tall, 12px text, so filled status badges and outline metadata badges line up in the same row.",
       "Filled semantic badge = actual status / severity / lifecycle meaning.",
       "Outline badge = categorical metadata (role, module, document-type).",
       "Status colour must not be replaced by primary/secondary styling.",
@@ -317,15 +318,19 @@ export const entries: CatalogueEntry[] = [
     title: "Tabs",
   },
   {
-    appliedIn: ["Create/Edit Document forms and the Settings user form."],
+    appliedIn: [
+      "Create Document, the Edit Draft editor, and the Settings user and role forms.",
+    ],
     consistency:
-      "Consistent where applied. Disabled styling relies on has-disabled: (see prototype-overrides notes).",
+      "Consistent. FormLabel and RECESSED_INPUT live in components/accura-form.tsx and are imported, not re-derived — they were duplicated per screen until 2026-11-10, which is how a screen drifted off them.",
     group: "components",
     id: "form-fields",
     rules: [
       "Every field marks required (red *) or optional (muted “(Optional)”).",
       "No helper text that only repeats the label or control.",
       "Disabled control changes surface (Zinc 100 recessed), not only opacity.",
+      "A system-filled field is disabled with RECESSED_INPUT, not readOnly — readOnly renders as an ordinary editable field.",
+      "Scoped to Tags: the Add control sits inside the input as an inline-end addon. It is a convenience for typing several short free-text values in a row, not a general form pattern — a field that picks from a known set (Reviewers, Departments, references) uses a combobox instead.",
     ],
     sources: [
       { label: "Rule", where: "docs/rules/ui-hierarchy.md §Form fields" },
@@ -333,6 +338,8 @@ export const entries: CatalogueEntry[] = [
         label: "Decision",
         where: "DECISIONS.md · 2026-11-04 Form fields state required/optional",
       },
+      { label: "Component", where: "components/accura-form.tsx" },
+      { label: "QA", where: "design-qa.md · Iterations 33, 34, 39" },
     ],
     status: "ready",
     summary: "Required/optional always marked; disabled = recessed surface.",
@@ -349,7 +356,10 @@ export const entries: CatalogueEntry[] = [
     rules: [
       "Option content at the inline start, selection indicator at the inline end.",
       "No empty indicator gutter before unselected options.",
-      "Implemented in the shared ComboboxItem so every consumer inherits it.",
+      "Implemented in the shared ComboboxItem AND SelectItem so every consumer inherits it; never re-implemented per screen.",
+      "Picking several from a roster is ComboboxChips: chips inside the input, typing filters, trailing chevron — never a Select plus an Add button plus a chip row.",
+      "A segmented control's track stays neutral (Zinc 200); the white indicator marks the choice.",
+      "Rejected and not to be retried: a Brand 25 track (the unselected half looks chosen), a Brand 100 indicator, and a lime --accura-pop indicator (both outshout the page's primary action).",
     ],
     sources: [
       {
@@ -361,6 +371,11 @@ export const entries: CatalogueEntry[] = [
         where: "DECISIONS.md · 2026-11-04 Selection indicators trail content",
       },
       { label: "QA", where: "design-qa.md · Iteration 24 — Combobox" },
+      { label: "QA", where: "design-qa.md · Iteration 33 — Select parity" },
+      {
+        label: "QA",
+        where: "design-qa.md · Iteration 39 — Reviewers use ComboboxChips",
+      },
     ],
     status: "ready",
     summary: "Content leads, selection indicator trails; no empty gutter.",
@@ -443,15 +458,25 @@ export const entries: CatalogueEntry[] = [
     rules: [
       "Secondary/neutral header; row hover on a secondary surface.",
       "Row action uses the 28px icon button (not 24px).",
+      "More columns than the viewport holds? Scroll — never hide columns at breakpoints.",
+      "The trailing action cell is pinned, so a row's actions never scroll out of reach.",
+      "That cell shows nothing at rest; it appears only on the hovered or keyboard-focused row.",
+      "The elevation sits on the action — a white, bordered, shadowed chip — not on the cell.",
+      "The cell only masks the columns scrolling under it; the header's trailing cell is not pinned at all.",
+      "Scrolled to the end: every row shows a plain action, with no chip, border or shadow.",
+      "While a row's menu is open, that row stays revealed — held in state, since the popup is portalled out of the row.",
+      "Truncate a long cell value with its full text on hover; never let it set the column width.",
       "Pagination selection uses the secondary surface, not primary.",
       "Empty state gives a clear message and a recovery action.",
     ],
     sources: [
       { label: "Rule", where: "docs/rules/ui-hierarchy.md §Icons / Color" },
+      { label: "Rule", where: "docs/rules/ui-hierarchy.md §Wide tables" },
       {
         label: "Decision",
         where: "DECISIONS.md · 2026-11-04 Card-table visual treatment deferred",
       },
+      { label: "QA", where: "design-qa.md · Iteration 37 / 38" },
       {
         label: "Reference",
         where: "docs/visual-references/table-compositions.md",
@@ -459,8 +484,9 @@ export const entries: CatalogueEntry[] = [
     ],
     status: "draft",
     statusNote:
-      "Row-action size and header/hover colors are settled, but the overall card-table treatment is deferred pending a coordinated scope.",
-    summary: "Neutral header, 28px row actions, pagination, empty state.",
+      "Row-action size and header/hover colors are settled. The horizontal scroll, the pinned action cell and its hover reveal were built on 2026-11-10 and revised three times the same day — they are not signed off. The overall card-table treatment remains deferred pending a coordinated scope.",
+    summary:
+      "Neutral header, horizontal scroll, row actions revealed on hover.",
     title: "Data Table",
   },
 
@@ -496,13 +522,18 @@ export const entries: CatalogueEntry[] = [
     title: "Permission / Config Matrix",
   },
   {
-    appliedIn: ["Each Settings section (Users, Roles, Organisation…)."],
+    appliedIn: [
+      "Every Settings section, plus the Create Document and Edit Draft form cards.",
+    ],
     consistency:
-      "Consistent. Zinc 50 header plane over a white body with one divider.",
+      "Consistent. SectionCard and SectionHeading live in components/accura-form.tsx; no screen builds its own heading.",
     group: "patterns",
     id: "settings-section-header",
     rules: [
-      "Zinc 50 header holds the title, description, and primary section action.",
+      "Zinc 50 header holds the title, the primary section action, and either a description or a hint.",
+      "gap-0.5 between title and description; the description never floats away from its title.",
+      "Prefer a hint (ⓘ beside the title) over a paragraph: a paragraph under every title pushes the first control down the page.",
+      "Reserve either for something the user cannot infer from the label and the control — never to repeat them.",
       "Tabs, controls, and data sit on the white body below one divider.",
       "Do not repeat gray bands for nested content.",
     ],
@@ -542,45 +573,278 @@ export const entries: CatalogueEntry[] = [
     title: "Document List",
   },
   {
-    appliedIn: ["Create Document entry point."],
+    appliedIn: ["Create Document, as the first row of the form."],
     consistency:
-      "Built, but the External branch of the flow it leads into is not yet spec-aligned (PRD-002).",
+      "Consistent. One row for one choice between two; the form below adapts in place.",
     group: "patterns",
     id: "create-category-chooser",
     rules: [
-      "Two radio cards (Controlled vs External) explain the difference before the form.",
-      "Selection routes to the matching editor and locks the category's constraints.",
+      "The category is a segmented control inline with its own label, not a dialog before the page and not a pair of cards.",
+      "Track on Zinc 200, white moving indicator — see Selection Controls for the colours that were rejected.",
+      "Choosing External fixes the Document Type to External Document (EXT) and hides References and Approval.",
+      "Switching away from entered approval assignments confirms first; switching with nothing entered is immediate.",
     ],
     sources: [
       { label: "PRD", where: "PRD-002 §Create document" },
-      { label: "Prototype", where: "components/documents-prototype.tsx" },
+      { label: "Story", where: "US-007 AC-01 · US-010 AC-01" },
+      {
+        label: "Mockup",
+        where: "Accura Mockup · createDocumentView .create-mode",
+      },
+      { label: "Prototype", where: "components/create-document-screen.tsx" },
+      { label: "QA", where: "design-qa.md · Iterations 31, 35, 36" },
+    ],
+    status: "ready",
+    summary: "Controlled-vs-External segmented control inline with its label.",
+    title: "Create Category Chooser",
+  },
+
+  {
+    appliedIn: [
+      "Primary Document, Attachments, References, Approval and Document category on Create Document; Primary document, Attachments and References on the Edit Draft editor.",
+    ],
+    consistency:
+      "Consistent. One Hint component in components/accura-form.tsx, rendered by SectionHeading and by any row that needs it.",
+    group: "components",
+    id: "section-hint",
+    rules: [
+      "An ⓘ sits beside the section title and holds the rule the user cannot infer from the label and the control.",
+      "It is a popover, not a tooltip: a tooltip opens on hover and focus only, so an icon that looks pressable did nothing when pressed and could not be opened at all on touch.",
+      "Never use it to repeat the label, the marker, or what the control already states.",
+    ],
+    sources: [
+      { label: "Rule", where: "docs/rules/ui-hierarchy.md §Form fields" },
+      { label: "Component", where: "components/accura-form.tsx" },
+      { label: "QA", where: "design-qa.md · Iterations 35, 36" },
+    ],
+    status: "ready",
+    summary:
+      "ⓘ beside a section title, opening on click, for a rule the UI cannot show.",
+    title: "Section Hint",
+  },
+  {
+    appliedIn: ["Create Document, beside the page title."],
+    consistency:
+      "Built on the create screen only; the Edit Draft editor still shows a static “Saved just now”.",
+    group: "behaviors",
+    id: "unsaved-indicator",
+    rules: [
+      "A persistent badge beside the page title whenever the form holds unsaved input.",
+      "It supplements the discard confirmation, it does not replace it: US-007 AC-04 only confirms on leaving, which tells the user about unsaved work at the moment they are about to lose it.",
+    ],
+    sources: [
+      { label: "Story", where: "US-007 AC-04" },
+      { label: "Reference", where: "Mobbin · Shopify unsaved-changes bar" },
+      { label: "Prototype", where: "components/create-document-screen.tsx" },
+      { label: "QA", where: "design-qa.md · Iteration 33" },
     ],
     status: "draft",
     statusNote:
-      "The chooser exists, but the External editor still shows References/Approval and lacks “Acknowledge & Register”.",
-    summary: "Controlled-vs-External radio cards before the create form.",
-    title: "Create Category Chooser",
+      "Apply it to the Edit Draft editor when US-014 is built, and replace that screen's static “Saved just now”.",
+    summary: "Persistent “Unsaved changes” badge beside the page title.",
+    title: "Unsaved Changes Indicator",
+  },
+
+  {
+    appliedIn: ["The Documents detail screen, all statuses."],
+    consistency:
+      "Built against US-011 on 2026-11-11; replaced three hand-rolled cards with the shared SectionCard and SectionHeading, so it now matches every other screen.",
+    group: "behaviors",
+    id: "document-details",
+    rules: [
+      "The screen renders the selected record — never a hard-coded sample; the preview's letterhead shows that document's own ID and version.",
+      "Category is shown separately from Document Type: an outline badge beside the filled status badge, and its own field.",
+      "Effective Date reads “Not set” before approval; Next Periodic Review reads “Set after approval”.",
+      "Next Periodic Review is derived from the approval date plus the type's frequency (default 3 years), not stored.",
+      "Overdue for Periodic Review is a displayed state only — status stays Approved and Effective.",
+      "Print is enabled only for Approved, Superseded, or Obsolete.",
+      "No workflow stepper on an External document, or on a Superseded or Obsolete one: neither is at a current stage.",
+      "Status badges reuse the register's variants, so one status reads the same in the list and in the details.",
+      "Side panel order follows the mockup: Document Information → Attachments → Reference Documents → Approval.",
+      "Attachments and Reference Documents carry a count badge, and each reference group carries its own.",
+      "An item whose only action is to open it has no button: its own name is the link, in the register's Brand 900.",
+      "A reference opens the version it names, or the newest row carrying that ID if that version has gone.",
+      "Related and Referred are group headings with counts, not muted captions — one says what supports the document, the other what it cites.",
+      "The Approval card groups by role (Reviewers with an approved/total badge, then Approver); the per-person role caption is then redundant.",
+      "The preview carries its own zoom (50–200%) and a full-screen view, because the column is narrower than the page it renders.",
+      "An attachment lists name, description and file name with an Open action and no remove control — viewing never changes the saved file.",
+      "A reference shows the document name over its ID and version, in the identifier treatment.",
+      "No Reference documents and no Approval card on an External document.",
+      "Superseded and Obsolete are not two shades of finished: Superseded stays the version to follow until its successor's Effective Date, Obsolete is withdrawn outright.",
+    ],
+    sources: [
+      {
+        label: "Rule",
+        where: "docs/rules/ui-hierarchy.md §Containers / Badges",
+      },
+      {
+        label: "Decision",
+        where: "DECISIONS.md · 2026-11-11 The Document ID opens a document",
+      },
+      { label: "QA", where: "design-qa.md · Iteration 40" },
+      {
+        label: "Prototype",
+        where: "components/document-flow-screens.tsx · DetailScreen",
+      },
+    ],
+    status: "draft",
+    statusNote:
+      "Built 2026-11-11. The returned-Draft rejection notice and the eligibility gate arrived with US-012; real permissions have not, and a Superseded version does not yet show that it is still in use during the 10-day handover. See docs/agent-worklog.md.",
+    summary:
+      "Details render the selected record; derived review date; Print and stepper gated by status.",
+    title: "Document Details",
+  },
+
+  {
+    appliedIn: [
+      "The Documents detail screen, In Review and In Approval.",
+      "The rejection dialog and the returned Draft editor.",
+    ],
+    consistency:
+      "Built against US-012 on 2026-11-11. Replaces a single Approve that advanced the document on its own, and a disabled Reject that answered nothing.",
+    group: "behaviors",
+    id: "review-decision",
+    rules: [
+      "Progress is held per assigned Reviewer, not as one shared flag: each carries their own Pending or Approved badge.",
+      "One approval clears one assigned slot — the actor's own, or the first outstanding one annotated “by <name>”.",
+      "The document stays In Review until every assigned Reviewer has approved; only the final one advances it.",
+      "The outstanding count is stated in words beneath the route, and the action bar names who is still awaited.",
+      "A user who is not entitled to decide gets no action bar at all — not a disabled one — and a banner saying why.",
+      "The required Reason keeps its submit control live: pressing it empty marks the field invalid and states what is missing.",
+      "A dialog opened by state, not by a trigger, resets its per-use fields on the open transition; Base UI reports no opening.",
+      "A rejection returns the document to Draft with a notice naming the rejecting role, user, date and time, and reason.",
+      "Resubmitting clears the notice and resets the route: a new review cycle starts clean.",
+      "The tally is keyed by document, so opening another row never inherits the last row's decisions.",
+    ],
+    sources: [
+      {
+        label: "Rule",
+        where: "docs/rules/ui-hierarchy.md §Gated actions and decision dialogs",
+      },
+      {
+        label: "Decision",
+        where: "DECISIONS.md · 2026-11-11 One approval clears one slot",
+      },
+      {
+        label: "Decision",
+        where:
+          "DECISIONS.md · 2026-11-11 A rejection dialog prompts rather than disables",
+      },
+      { label: "QA", where: "design-qa.md · Iteration 41" },
+      {
+        label: "Prototype",
+        where:
+          "components/document-flow-screens.tsx · DetailScreen, RejectDialog",
+      },
+    ],
+    status: "draft",
+    statusNote:
+      "Needs sign-off. The “Viewing as” switcher is prototype chrome standing in for a permission model; US-012's own open question — the exact permissions for actions other than viewing — is still with the BA.",
+    summary:
+      "Per-Reviewer approval tally, an absent action bar when ineligible, and a rejection that is recorded on the Draft.",
+    title: "Review Decision & Rejection",
+  },
+
+  {
+    appliedIn: [
+      "The Draft editor.",
+      "The Upload Revision dialog.",
+      "The Mark as Obsolete confirmation.",
+    ],
+    consistency:
+      "Built against US-013 to US-018 on 2026-11-11. The flow screens write to the record now; before this they could only change which view was shown.",
+    group: "behaviors",
+    id: "document-lifecycle-actions",
+    rules: [
+      "A status change writes to the record, so it survives going back to the register — not just to the view.",
+      "Approving sets the Effective Date 10 days out and supersedes the previous Approved version at that same moment.",
+      "An editor's save indicator reads the save state — “Unsaved changes” or “All changes saved” — never a fixed “Saved just now”.",
+      "A Draft's identity is fixed: Document ID, type, author, version and status are read-only; its content is not.",
+      "An invalid save is refused and the footer names the one correction to make.",
+      "A destructive confirmation names the outcome in its buttons — “Keep document” and “Mark as Obsolete”, not Cancel and OK.",
+      "A dialog that creates something requires every mandatory field at once and reports on all of them, not the first.",
+      "Print reduces the page to the document: the preview is the print root, chrome is dropped, and the scrolling container is unwrapped.",
+      "An action the prototype cannot really perform hands over something labelled as a placeholder and says so, rather than imitating the real thing.",
+      "A Draft's footer carries Cancel beside Save and Submit; it runs the same discard confirmation as the breadcrumb, so it cannot lose work.",
+      "A section heading never carries a counter against a maximum — “0/5” reads as a quota to fill. The limit lives in the hint and in the disabled Add control.",
+      "The identifier that opens a record carries a link colour at rest (Brand 900), not the foreground of every other cell.",
+    ],
+    sources: [
+      { label: "QA", where: "design-qa.md · Iteration 42" },
+      {
+        label: "Rule",
+        where: "docs/rules/ui-hierarchy.md §Gated actions and decision dialogs",
+      },
+      {
+        label: "Prototype",
+        where:
+          "components/document-flow-screens.tsx · EditorScreen, RevisionDialog, ObsoleteDialog",
+      },
+    ],
+    status: "draft",
+    statusNote:
+      "Needs sign-off. Nothing persists across a reload, files are presence-only, and Revision History is plain text where US-015 asks for rich text — see the Refine pass backlog in docs/agent-worklog.md.",
+    summary:
+      "Approve, edit, revise, obsolete, print and download — each writing to the record and gated by status.",
+    title: "Document Lifecycle Actions",
+  },
+
+  {
+    appliedIn: ["The Documents register."],
+    consistency:
+      "Built on the Documents table; apply it to any later register with more columns than a viewport holds.",
+    group: "behaviors",
+    id: "wide-table-scroll",
+    rules: [
+      "A wide register scrolls horizontally; it does not hide columns at fixed breakpoints.",
+      "The trailing action cell stays pinned so a row's actions never scroll out of reach.",
+      "While the row can still scroll, the action shows on the hovered or keyboard-focused row only — never on every row at once.",
+      "The elevation is on the action, as a white bordered chip with a shadow; the cell behind it only masks what scrolls underneath.",
+      "At the end of the row every row shows a plain action, with no chip, border or shadow: nothing is being covered.",
+      "Reveal answers to :focus-visible, not :focus-within — closing a menu by mouse must not leave a second action raised.",
+      "A row whose action menu is open stays revealed, held in state: the popup is portalled out of the row, so CSS cannot see it.",
+      "The header's trailing cell is not pinned at all: a header is never hovered and holds no action.",
+    ],
+    sources: [
+      { label: "Rule", where: "docs/rules/ui-hierarchy.md §Wide tables" },
+      { label: "Reference", where: "User screen recording, 2026-11-10" },
+      {
+        label: "Prototype",
+        where: "components/documents-prototype.tsx · ScrollableTable",
+      },
+      { label: "QA", where: "design-qa.md · Iteration 37 / 38" },
+    ],
+    status: "draft",
+    statusNote:
+      "Built 2026-11-10 and revised three times the same day — the hover reveal, the chip elevation, the open-menu state and the flat end-of-row behaviour are all from that day's review and are not signed off.",
+    summary:
+      "Wide registers scroll; the hovered row's action lifts as a chip, and flattens at the end of the row.",
+    title: "Wide Table Scroll & Pinned Actions",
   },
 
   // ---------------- Behaviors ----------------
   {
     appliedIn: ["Document lifecycle screens (Draft → Approved)."],
     consistency:
-      "In flux. Labels were just renamed to “In Approval”; the stepper does not yet cover Superseded / Obsolete.",
+      "Settled 2026-11-11: label treatment signed off and the Superseded / Obsolete question answered — a closed document shows no stepper.",
     group: "behaviors",
     id: "workflow-stepper",
     rules: [
       "Four stages: Draft → In Review → In Approval → Approved.",
-      "Completed / current / future states must not rely on connector colour alone.",
+      "Stage names are semibold in the brand colour at every stage — completed, current and future alike.",
+      "The caption under each stage (“Completed by…”, “Current stage”) stays muted and regular at 12px.",
+      "The caption is derived per stage: Draft names the Author, Review counts the Reviewers, Approval names the Approver.",
+      "A stage with several actors states a count (“Approved by 2 Reviewers”), never a name plus “+1” — the Approval card holds the roster.",
+      "Completed / current / future states must not rely on connector colour alone; the marker carries them.",
+      "No stepper on an External document, or on a Superseded or Obsolete one: neither is at a current stage.",
     ],
     sources: [
       { label: "PRD", where: "PRD-002 §Lifecycle" },
+      { label: "Rule", where: "docs/rules/ui-hierarchy.md §Workflow stepper" },
       { label: "Prototype", where: "components/document-flow-screens.tsx" },
-      { label: "Audit", where: "documents/flow-audit.md" },
+      { label: "QA", where: "design-qa.md · Iteration 44" },
     ],
-    status: "draft",
-    statusNote:
-      "Renamed this session; needs Superseded/Obsolete coverage and a decision entry.",
+    status: "ready",
     summary:
       "Four-stage lifecycle stepper with completed/current/future states.",
     title: "Workflow Stepper",
@@ -601,8 +865,9 @@ export const entries: CatalogueEntry[] = [
     ],
     status: "draft",
     statusNote:
-      "Deferred by PRD-002 — do not treat as a standard. Keep as a future-reference exploration only.",
-    summary: "Signed confirmation for state transitions — deferred by PRD-002.",
+      "Removed from the prototype on 2026-11-10. PRD-002 defers it from the initial Document Module; if it returns it is a step in FRONT of the decision actions, not a restored dialog. The rejection reason survives on its own.",
+    summary:
+      "Signed confirmation for state transitions — removed, deferred by PRD-002.",
     title: "Electronic Signature",
   },
   {
@@ -656,16 +921,19 @@ export const entries: CatalogueEntry[] = [
     rules: [
       "One primary file plus up to five attachments.",
       "Controlled: PDF/DOCX/XLSX; External: PDF only; max 50 MB.",
-      "Primary file optional to save a draft, required to submit.",
+      "Primary file required for BOTH Save as Draft and Submit for Review (US-007 AC-03).",
+      "Once uploaded, the file shows as a preview whose own chrome carries the name, size, zoom and remove — no separate control row above it.",
+      "Attachments carry an optional Name and Description, 0–100 characters (US-010 AC-02).",
     ],
     sources: [
       { label: "PRD", where: "PRD-002 §Create document" },
-      { label: "Prototype", where: "components/document-flow-screens.tsx" },
+      { label: "Story", where: "US-007 AC-02/AC-03 · US-010 AC-02" },
+      { label: "Prototype", where: "components/create-document-screen.tsx" },
+      { label: "QA", where: "design-qa.md · Iteration 33" },
     ],
-    status: "draft",
-    statusNote:
-      "Accepted types are shown as a fixed string; must branch by category.",
-    summary: "Primary file + up to five attachments, with type/size rules.",
+    status: "ready",
+    summary:
+      "Primary file + up to five attachments, branched by category, with preview chrome.",
     title: "File Uploader & Attachments",
   },
   {
@@ -684,8 +952,9 @@ export const entries: CatalogueEntry[] = [
     ],
     status: "draft",
     statusNote:
-      "Readiness percentage is a placeholder; needs real field-level validation.",
-    summary: "Sticky “ready to submit” summary surfacing missing items early.",
+      "Removed from the create screen on 2026-11-10: the percentage was invented and gated Submit on a number no requirement defines. Replaced by real field-level validation that names the one correction needed, plus a persistent “Unsaved changes” badge beside the page title.",
+    summary:
+      "Superseded by field-level validation and an unsaved-changes indicator.",
     title: "Readiness Summary",
   },
 ];

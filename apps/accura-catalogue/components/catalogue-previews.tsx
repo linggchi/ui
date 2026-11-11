@@ -14,6 +14,7 @@ import {
   Calendar as CalendarIcon,
   Check as CheckIcon,
   Download as DownloadIcon,
+  InfoCircle as InfoIcon,
   Page as PageIcon,
   Search as SearchIcon,
   Settings as SettingsIcon,
@@ -75,7 +76,7 @@ function AssigneeRow({
         </AvatarFallback>
       </Avatar>
       <div className="min-w-0 leading-tight">
-        <p className="truncate text-[10px] font-medium">{name}</p>
+        <p className="truncate font-medium text-[10px]">{name}</p>
         <p className="truncate text-[9px] text-muted-foreground">{jobRole}</p>
       </div>
     </div>
@@ -115,7 +116,7 @@ const previews: Record<string, React.ReactNode> = {
       </span>
       <div className="flex flex-col gap-0.5 leading-tight">
         <span
-          className="text-sm font-semibold text-foreground"
+          className="font-semibold text-foreground text-sm"
           style={{ fontVariationSettings: '"GEOM" 50' }}
         >
           Heading · GEOM 50
@@ -258,7 +259,7 @@ const previews: Record<string, React.ReactNode> = {
     <div className="flex w-44 gap-2 rounded-lg border border-info/32 bg-info/8 p-2.5">
       <div className="mt-0.5 size-3.5 shrink-0 rounded-full bg-info" />
       <div className="leading-tight">
-        <p className="text-[11px] font-medium text-info">Invitation email</p>
+        <p className="font-medium text-[11px] text-info">Invitation email</p>
         <p className="text-[10px] text-muted-foreground">
           Sent once the user is added.
         </p>
@@ -286,7 +287,7 @@ const previews: Record<string, React.ReactNode> = {
         </AvatarFallback>
       </Avatar>
       <div className="leading-tight">
-        <p className="text-sm font-medium">Amit Kothari</p>
+        <p className="font-medium text-sm">Amit Kothari</p>
         <p className="text-[11px] text-muted-foreground">amit.k@acme.com</p>
       </div>
     </div>
@@ -346,7 +347,7 @@ const previews: Record<string, React.ReactNode> = {
     <div className="w-48 overflow-hidden rounded-lg border bg-card">
       <div className="flex items-center justify-between bg-[var(--accura-zinc-100)] px-2.5 py-2">
         <div className="leading-tight">
-          <p className="text-[11px] font-semibold">Users</p>
+          <p className="font-semibold text-[11px]">Users</p>
           <p className="text-[9px] text-muted-foreground">Manage members</p>
         </div>
         <span className="rounded-md bg-primary px-2 py-0.5 text-[9px] text-primary-foreground">
@@ -389,29 +390,30 @@ const previews: Record<string, React.ReactNode> = {
     </div>
   ),
   "create-category-chooser": (
-    <div className="flex gap-2">
-      {[
-        ["Controlled", true],
-        ["External", false],
-      ].map(([label, selected]) => (
-        <div
-          className={`w-20 rounded-md border p-2 text-[10px] ${
-            selected ? "border-primary/40 bg-secondary" : "border-border"
-          }`}
-          key={label as string}
-        >
-          <span
-            className={`mb-1 flex size-3.5 items-center justify-center rounded-full border ${
-              selected
-                ? "border-primary bg-primary text-primary-foreground"
-                : ""
-            }`}
-          >
-            {selected && <CheckIcon className="size-2.5" />}
-          </span>
-          <p className="font-medium">{label}</p>
-        </div>
-      ))}
+    <div className="flex w-fit items-center gap-0.5 rounded-lg bg-[var(--accura-zinc-200)] p-0.5 text-[10px]">
+      <span className="rounded-md bg-background px-2 py-1 font-medium">
+        Controlled
+      </span>
+      <span className="px-2 py-1 text-muted-foreground/72">External</span>
+    </div>
+  ),
+  "section-hint": (
+    <div className="flex w-40 flex-col gap-1">
+      <div className="flex items-center gap-1 text-[11px]">
+        <span className="font-bold">Attachments</span>
+        <InfoIcon className="size-3 text-muted-foreground" />
+      </div>
+      <div className="rounded-md border bg-background px-2 py-1.5 text-[10px] text-muted-foreground shadow-sm">
+        They do not receive separate Document IDs.
+      </div>
+    </div>
+  ),
+  "unsaved-indicator": (
+    <div className="flex items-center gap-2">
+      <span className="font-bold text-sm">Create Document</span>
+      <span className="rounded-full bg-warning/16 px-2 py-0.5 font-medium text-[10px] text-warning-foreground">
+        Unsaved changes
+      </span>
     </div>
   ),
 
@@ -467,7 +469,7 @@ const previews: Record<string, React.ReactNode> = {
           </span>
           <div className="flex-1 rounded-md border bg-background p-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-medium">{label}</span>
+              <span className="font-medium text-[10px]">{label}</span>
               <Badge size="sm" variant={variant as "secondary" | "success"}>
                 ✓
               </Badge>
@@ -500,10 +502,10 @@ const previews: Record<string, React.ReactNode> = {
   ),
   "readiness-summary": (
     <div className="w-40 rounded-lg border bg-card p-2.5 shadow-xs">
-      <p className="mb-1.5 text-[10px] font-medium">Ready to submit</p>
+      <p className="mb-1.5 font-medium text-[10px]">Ready to submit</p>
       <div className="flex items-center gap-2">
         <Progress className="flex-1" value={67} />
-        <span className="text-[10px] font-medium">67%</span>
+        <span className="font-medium text-[10px]">67%</span>
       </div>
     </div>
   ),

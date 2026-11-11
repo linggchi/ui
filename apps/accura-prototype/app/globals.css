@@ -56,3 +56,64 @@ button[aria-label] svg,
 [data-slot="menu-trigger"][aria-label] svg {
   opacity: 1;
 }
+
+/*
+ * One badge size across Accura: 22px tall with 12px text.
+ *
+ * COSS shrinks a badge to 18px and 12px from the `sm` breakpoint up, while
+ * the icon inside keeps its own size. Mixing a filled status badge with an
+ * outline metadata badge in the same table row then produced two different
+ * heights sitting on two different baselines. Pinning one height and one text
+ * size makes every badge line up, in the Documents register and in Settings.
+ *
+ * Deliberate departure from the generated default - see
+ * docs/rules/ui-hierarchy.md and docs/rules/prototype-overrides.md.
+ */
+[data-slot="badge"] {
+  height: 1.375rem; /* 22px */
+  min-height: 1.375rem;
+  font-size: 0.75rem; /* 12px */
+  line-height: 1rem;
+}
+
+/*
+ * US-017 Print Document.
+ *
+ * AC-02 prints the selected document version, not the application around it:
+ * the sidebar, the top bar, the action buttons, the stepper and the side panel
+ * are chrome, and a printed page carrying them is not a usable paper copy.
+ * The preview card is marked `data-print-root`; everything outside it is
+ * hidden, and the card itself is unwrapped from the scrolling container so the
+ * whole document flows across pages instead of printing one clipped viewport.
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  [data-print-root],
+  [data-print-root] * {
+    visibility: visible;
+  }
+
+  [data-print-root] {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    width: 100%;
+    border: 0;
+    box-shadow: none;
+  }
+
+  /* The preview scrolls on screen; on paper it must not clip. */
+  [data-print-root] [data-print-page] {
+    max-height: none;
+    overflow: visible;
+    background: #fff;
+    padding: 0;
+  }
+
+  [data-print-hidden] {
+    display: none;
+  }
+}

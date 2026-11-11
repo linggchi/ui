@@ -2,6 +2,136 @@
 
 This is the canonical history of Accura product, design-system, and prototype decisions. It records why a direction was chosen and preserves superseded directions. Current product facts live in `docs/product-knowledge/`; current rules live in `docs/rules/`; implemented changes are indexed in root `CHANGELOG.md`.
 
+## 2026-11-11 - A previous version is Superseded on approval, not on the Effective Date
+
+**Status:** Answer to `PRD-002` open question 3, settled by the user on 2026-11-11. The question remains open in the requirements repository, which is separate and was deliberately left unchanged.
+
+### Decision
+
+When a revision is approved, the previous version becomes **Superseded at that moment** — not 10 days later when the new version's Effective Date arrives.
+
+### Reasoning
+
+This is what the prototype already did, so no code changed; what changed is that the behaviour is now a decision rather than a default nobody had chosen.
+
+Approval and effectiveness do different jobs. Approval is the judgement that the new version replaces the old one, and it is made on a date by a named person. The Effective Date is an operational delay — the 10 days a site needs to retrain, reprint and redistribute before the new version is used. Keeping the old version Approved through that window would say the organisation still stands behind a document it has formally replaced.
+
+### The 10-day window: the Superseded version stays in use
+
+For the 10 days between approval and the Effective Date, a document family has a Superseded version and an Approved-but-not-yet-effective version. Settled by the user on 2026-11-11: **the Superseded version remains the one to follow** until its successor takes effect.
+
+That fixes what the two closed statuses mean, which the requirement never spelled out:
+
+- **Superseded** — replaced, no longer the current revision, but still usable while its successor waits for its Effective Date.
+- **Obsolete** — withdrawn. `US-016` AC-04 puts it beyond active use or linking entirely.
+
+So the two are not two shades of "finished". One is a handover state with an end date; the other is terminal.
+
+### What the prototype does not yet show
+
+A Superseded version currently renders a status badge and nothing else. A user reading "Superseded" has every reason to conclude "do not use this" — which is now wrong for the 10 days that matter most, precisely when someone is asking which revision to follow. The screen should say that the version is still in use and until when.
+
+Showing it means the details screen knowing the *family*, not just the one version: it has to find the successor and read its Effective Date. That is a real change, not a label, and it is listed in the Refine pass backlog in [`docs/agent-worklog.md`](../agent-worklog.md).
+
+## 2026-11-11 - A Draft keeps a Cancel action, guarded by the discard confirmation
+
+**Status:** Divergence from `US-014 - Edit Draft Document` AC-01 (requirements repository, baseline `c2cbd1f`), and a reversal of the 2026-11-10 pattern audit. Directed by the user on 2026-11-11 during the refine pass and **confirmed by the user the same day with the conflict stated** — so it is settled here, not provisional. The requirements repository is separate and was deliberately left unchanged; the conflict with AC-01 is for the BA to resolve upstream.
+
+### Decision
+
+The Draft editor's footer carries **Cancel** beside Save as draft and Submit for review. Cancel is the same exit as Back to Documents: with unsaved edits it opens the discard confirmation, and with none it leaves at once.
+
+### Reasoning
+
+`US-014` AC-01 reads "no Cancel action is available for the Draft", and on 2026-11-10 a Cancel on the saved-Draft editor was **removed** for exactly that reason. So this reverses a correction, and that is worth being explicit about.
+
+What the rule guards against is a control that throws away work. A Cancel that discards silently does that; this one cannot. It routes through the same confirmation as the breadcrumb, which names the document, says the saved Draft is unchanged, and offers **Continue editing** first.
+
+What the rule costs is an exit. A footer holding only Save and Submit asks a user who opened the Draft by mistake to find the breadcrumb at the top of a long scrolling form — a route they have already scrolled away from. The two commitment actions sit at the bottom; the way out should be reachable from the same place.
+
+### What would change this
+
+Only the BA. If they confirm that AC-01's "no Cancel" is about the *control existing at all* rather than about losing work unconfirmed, remove it again and rely on the breadcrumb. The confirmation stays either way.
+
+This is the second divergence in PRD-002 that is settled in the prototype and unresolved upstream, alongside [the Document ID opening a document](#2026-11-11---the-document-id-opens-a-document-not-the-name). Both are listed for the BA in [`docs/agent-worklog.md`](../agent-worklog.md).
+
+## 2026-11-11 - One approval clears one assigned Reviewer's slot
+
+**Status:** Interpretation of `US-012 - Review Controlled Document` (requirements repository, baseline `c2cbd1f`), built on 2026-11-11. Not a divergence — the story does not settle this — and open for the BA to correct.
+
+### Decision
+
+Approving a document In Review marks **one** assigned Reviewer as having approved:
+
+- the acting user's own slot, when they are themselves an assigned Reviewer;
+- otherwise the first outstanding slot, annotated with who acted ("Reviewer · by Priya Shah").
+
+The document moves to In Approval only once every assigned Reviewer's slot is approved.
+
+### Reasoning
+
+`US-012` AC-02 says the decision is "recorded as approved under the acting user's identity", and its Notes add that a user with **Read and Write All Records** "may review without being assigned" while "the transition to In Approval still requires approval from every Reviewer assigned to the document".
+
+Those two sentences pull apart. If an unassigned user's approval were recorded on its own, outside the route, it would never bring the document closer to In Approval and the permission would do nothing on this screen. If it cleared the whole route, one click would stand in for every Reviewer, which the Notes forbid in as many words.
+
+Clearing one slot at a time satisfies both: the permission is useful, the acting identity is preserved and visible, and the number of approvals required is still the number of Reviewers assigned.
+
+### What would change this
+
+If the BA confirms that an unassigned approval is recorded **alongside** the route rather than within it, the Approval card gains a separate entry for it and the gate stays untouched. The annotation already carries the information either way.
+
+## 2026-11-11 - A rejection dialog prompts rather than disables
+
+**Status:** Resolution of a conflict between `US-012` AC-03 and the prototype's existing control, settled on 2026-11-11 in favour of the requirement.
+
+### Decision
+
+In the rejection dialog, **Reject document** stays enabled with the Reason field empty. Pressing it does not submit: the field is marked invalid and its hint is replaced with "Enter a reason before rejecting this document."
+
+### Reasoning
+
+`US-012` AC-03's third scenario is explicit — "the rejection is not submitted **and** the user is prompted to provide a reason". The dialog had a disabled button, which prevents the attempt rather than answering it, and says nothing at all to a user who presses and sees nothing happen.
+
+The general form of this is now a rule: a required field in a decision dialog keeps its submit control live and reports on the attempt. It is recorded in [`../rules/ui-hierarchy.md`](../rules/ui-hierarchy.md) under Gated actions and decision dialogs.
+
+Disabling remains correct where pressing could do harm or where the missing input is obvious from the control itself — the Add button inside the Tags input is still disabled on an empty draft.
+
+## 2026-11-11 - The Document ID opens a document, not the name
+
+**Status:** Divergence from `US-011 - View Document Details` (requirements repository, baseline `c2cbd1f`). Confirmed by the user on 2026-11-11 with the requirement in front of them. The requirements repository is separate and was deliberately left unchanged.
+
+### Decision
+
+In the Documents register, the **Document ID** is the link that opens a document's details. The Name is plain text in its own column.
+
+This contradicts `US-011` in two places: its **Entry Point** reads "From **Documents**, select the document's **Name** in a list row", and AC-01 reads "When the user selects the document's name". `US-006` does not specify which column is the link.
+
+### Reasoning
+
+The Document ID is the document's identity in a QMS: it is what a procedure cites, what an auditor asks for, what a user searches by, and what the register sorts and groups by. `ACME-URS-2026-000005` is unambiguous; "Document Control Requirements" is not — the register deliberately shows the same name on consecutive rows for different versions of one document, so the name alone does not identify what would open.
+
+The two columns were merged into one cell on 2026-11-10 and split again the same day because the merged cell overlapped at narrow widths; the link stayed on the ID through both. Moving it to the name now would also undo that.
+
+Consequences: the ID column carries the `identifier` type treatment, truncates at 220 px with the full value on hover, and takes the link affordance (primary colour and underline on hover, focus ring); the Name column truncates with its full value on hover and has no affordance. Both columns remain, as AC-01 of `US-006` requires.
+
+## 2026-11-10 - Electronic signature is removed, the rejection reason stays
+
+### Decision
+
+The prototype no longer asks for an electronic signature. The Submit & sign / Approve & sign dialog — password re-entry, signature meaning, identity and role statement — is gone, and submit and approve now take effect directly. The **Electronic signatures** panel on the document record (Author, Review, Approval signature) is removed, the audit trail reads "Approved" and "Review approved" rather than "Approved and signed", and the Dashboard banner says "waiting on your approval".
+
+What survives is the **rejection reason**, which `PRD-002` still requires: "Any eligible reviewer may reject it with a required reason". That path keeps a dialog — now a plain **Reject document** dialog whose confirm button stays disabled until a reason is entered.
+
+Removed in the same change: the **QA approver** role label on the document record. `PRD-002` states "A separate QA Approver role is not defined."
+
+### Reasoning
+
+`PRD-002`, as of requirements baseline `a3eea9c`, moves electronic signature out of scope twice — "Electronic signature is deferred and is not required for the initial Document Module implementation" for submission, and "Electronic signature is deferred from the initial implementation" for external registration — and lists "Reusable e-signature implementation" under Out of Scope as a later technical enhancement.
+
+The prototype had implemented it ahead of the requirement, which made the regulated-action ceremony look settled when it is not. The signature dialog was also carrying the rejection reason, so the two had to be separated rather than deleted together: removing the dialog outright would have dropped a requirement that is still in force.
+
+Consequence: the signature step no longer gates a transition, so the decision footer is the whole control. If electronic signature returns as its own story, it is added back as a step in front of these actions rather than by restoring this dialog.
+
 ## 2026-11-06 - Role details are read-only
 
 ### Decision
@@ -72,11 +202,13 @@ Keeping all three levels visible per row, rather than only the granted one, mean
 
 ## 2026-11-05 - A user holds exactly one role
 
+**Status:** The requirements caught up on 2026-11-05 (requirements baseline `a3eea9c`). `US-002` AC-02 now reads "select exactly one role" and AC-04 "exactly one role"; `US-004` AC-02 reads "assign exactly one role" and adds AC-06, which requires an organisation to keep at least one Admin; `PRD-001 - Setting` states "exactly one role per user". This is no longer a divergence, and AC-06 is now implemented. One sub-point of it survived: `US-003` AC-01 still lists a **Roles** column. On 2026-11-10 the user settled it in favour of the singular — a user holds exactly one role, so the column that shows it is **Role**. The prototype already read that way everywhere a single user's role appears (the Users column, the form label, and the role count); nothing in it changed. The plural survives only in **Roles & Permissions**, the section name from PRD-001, where it correctly refers to the organisation's set of roles. The wording of `US-003` AC-01 is for the BA to align; this repository does not edit the requirements.
+
 ### Decision
 
 The invite and edit user form assigns a single role through a radio group, not several through checkboxes. The users list shows one Role column value per person, and the Roles & Permissions list counts a user once.
 
-This contradicts the written requirement, which asks for multiple roles in five places: [`US-002`](../requirements/05%20User%20Story/PRD-001%20-%20User%20Roles%20&%20Permissions/US-002%20-%20Create%20User.md) AC-02 ("select one or more roles") and AC-04 ("at least one role"), [`US-004`](../requirements/05%20User%20Story/PRD-001%20-%20User%20Roles%20&%20Permissions/US-004%20-%20Edit%20User.md) AC-02, and [`PRD-001`](../requirements/04%20Epics%20-%20PRD/PRD-001%20-%20User%20Roles%20&%20Permissions.md) under the shared invite/edit form. The mockup also used checkboxes. The user confirmed the change with that evidence in front of them; the requirements repository is a separate submodule and was deliberately left unchanged.
+This contradicts the written requirement, which asks for multiple roles in five places: `US-002` (requirements repository) AC-02 ("select one or more roles") and AC-04 ("at least one role"), `US-004` (requirements repository) AC-02, and `PRD-001` (requirements repository) under the shared invite/edit form. The mockup also used checkboxes. The user confirmed the change with that evidence in front of them; the requirements repository is separate and was deliberately left unchanged — and was subsequently changed upstream to match, as recorded in Status above.
 
 ### Reasoning
 
@@ -174,7 +306,7 @@ Previously only required fields were marked, so an unmarked field could mean opt
 
 Present built-in role details as a read-only Module/Access level table. Drop the role description from the dialog and explain only the access levels the role actually grants. The user confirmed all three changes.
 
-These diverge from [`US-005 - View Role Details`](../requirements/05%20User%20Story/PRD-001%20-%20User%20Roles%20&%20Permissions/US-005%20-%20View%20Role%20Details.md), which specifies disabled radio controls (AC-02), a displayed description (AC-02), and all three access-level definitions (AC-03). The requirements repository is a separate submodule and was deliberately left unchanged, so this log is the record of the divergence.
+These diverge from `US-005 - View Role Details` (requirements repository), which specifies disabled radio controls (AC-02), a displayed description (AC-02), and all three access-level definitions (AC-03). The requirements repository is separate and was deliberately left unchanged, so this log is the record of the divergence.
 
 ### Reasoning
 
@@ -186,7 +318,7 @@ Every built-in role grants one uniform level across its modules, so module tabs 
 
 Give the Settings user list a Status column with Active, Inactive, and Invitation pending, rendered as filled semantic badges. Keep the identity cluster free of status so no row grows a third text line.
 
-[`PRD-001`](../requirements/04%20Epics%20-%20PRD/PRD-001%20-%20User%20Roles%20&%20Permissions.md) defines only Invitation pending and places user activation and deactivation out of scope; [`US-003`](../requirements/05%20User%20Story/PRD-001%20-%20User%20Roles%20&%20Permissions/US-003%20-%20View%20List%20Users.md) AC-01 lists four columns and excludes account status management. The user approved the wider model for the prototype; the requirements repository was left unchanged.
+`PRD-001` (requirements repository) defines only Invitation pending and places user activation and deactivation out of scope; `US-003` (requirements repository) AC-01 lists four columns and excludes account status management. The user approved the wider model for the prototype; the requirements repository was left unchanged.
 
 ### Reasoning
 
