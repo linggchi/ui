@@ -3,6 +3,12 @@
 import { Badge } from "@coss/ui/components/badge";
 import { Button } from "@coss/ui/components/button";
 import {
+  Menu,
+  MenuItem,
+  MenuPopup,
+  MenuTrigger,
+} from "@coss/ui/components/menu";
+import {
   Select,
   SelectItem,
   SelectPopup,
@@ -23,6 +29,7 @@ import {
   Eye as EyeIcon,
   MultiplePages as FilesIcon,
   GraduationCap as GraduationCapIcon,
+  MoreHoriz as MoreHorizontalIcon,
   RefreshDouble as RefreshCwIcon,
   Reports as ReportsIcon,
   WarningTriangle as WarningTriangleIcon,
@@ -30,6 +37,7 @@ import {
 import Image from "next/image";
 import { useMemo, useRef, useState } from "react";
 import { Tabs, TabsList, TabsTab } from "./accura-tabs";
+import { SectionCard, SectionHeading } from "@/components/accura-form";
 
 type DashboardScreenProps = {
   onOpenDocuments: () => void;
@@ -50,7 +58,7 @@ type ActionRecord = {
 
 const overviewModules = [
   {
-    detail: "0 overdue · of 1 user",
+    detail: "overdue · of 1 user",
     icon: GraduationCapIcon,
     metric: "0",
     name: "Training",
@@ -166,24 +174,34 @@ const priorityOptions = [
   { label: "Medium priority", value: "Medium" },
 ];
 
-function ModuleStatus({ tone, value }: { tone: string; value: string }) {
-  const variant = {
-    danger: "destructive",
-    success: "success",
-    warning: "warning",
-  }[tone] as "destructive" | "success" | "warning";
+/**
+ * The overview card's three states — and **one** coloured mark per card.
+ *
+ * The card went through two colours before this. It began with a lime rule
+ * (`--accura-pop`, used nowhere else in Accura) across every card regardless
+ * of state. That became a state-coloured rule, which at least meant
+ * something — but with a tinted icon and a tinted badge beside it, each card
+ * carried three coloured marks saying one thing, and five of those in a grid
+ * is a lot of colour for five numbers.
+ *
+ * So: no rule, a neutral icon, and the badge as the only colour. It already
+ * says the state in words.
+ *
+ * The badge uses `error` / `warning` / `success` — the 8% tints every other
+ * status in Accura uses — not `destructive`, whose saturated red made the
+ * dashboard the loudest screen in the product.
+ */
+const MODULE_TONES = {
+  danger: { badge: "error" },
+  success: { badge: "success" },
+  warning: { badge: "warning" },
+} as const;
 
-  return (
-    <Badge size="sm" variant={variant}>
-      {value}
-    </Badge>
-  );
-}
+type ModuleTone = keyof typeof MODULE_TONES;
 
 export function DashboardScreen({ onOpenDocuments }: DashboardScreenProps) {
   const [activeTab, setActiveTab] = useState<"actions" | "upcoming">("actions");
   const [priority, setPriority] = useState("all");
-  const [selectedModule, setSelectedModule] = useState("Documents");
   const recordsRef = useRef<HTMLElement>(null);
 
   const visibleRecords = useMemo(
@@ -262,204 +280,244 @@ export function DashboardScreen({ onOpenDocuments }: DashboardScreenProps) {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {overviewModules.map((module) => {
             const Icon = module.icon;
-            const selected = selectedModule === module.name;
-            return (
+            // Only Documents is built, so only Documents is pressable. A card
+            // that looks clickable and does nothing is worse than a flat one.
+            const opens = module.name === "Documents";
+            const body = (
+              <>
+                <span className="flex items-start justify-between gap-3">
+                  {/* The icon is neutral. The state is already in the badge's
+                      words and its tint; tinting the icon as well said the
+                      same thing a third time, and five cards each carrying
+                      two coloured marks is what made the grid noisy. */}
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">
+                    <Icon aria-hidden="true" className="size-4.5" />
+                  </span>
+                  <Badge
+                    size="sm"
+                    variant={MODULE_TONES[module.tone as ModuleTone].badge}
+                  >
+                    {module.status}
+                  </Badge>
+                </span>
+
+                {/* The number owns its line. Sharing one with the detail made
+                    the point of the card compete with a grey sentence. */}
+                <span className="mt-4 block font-bold text-3xl tabular-nums leading-none">
+                  {module.metric}
+                </span>
+                <span className="mt-2 block truncate font-medium text-sm">
+                  {module.name}
+                </span>
+                <span className="mt-0.5 block truncate text-muted-foreground text-xs">
+                  {module.detail}
+                </span>
+              </>
+            );
+
+            const shell =
+              "rounded-[20px] border border-border bg-card ps-5 pe-4 pt-5 pb-4 text-left shadow-xs";
+
+            return opens ? (
               <button
-                aria-pressed={selected}
-                className={`relative min-h-28 overflow-hidden rounded-xl border bg-card p-4 text-left shadow-xs outline-none transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring ${
-                  selected
-                    ? "border-primary/56 ring-2 ring-primary/12"
-                    : "border-border"
-                }`}
+                className={`${shell} outline-none transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring`}
                 key={module.name}
-                onClick={() => {
-                  setSelectedModule(module.name);
-                  if (module.name === "Documents") onOpenDocuments();
-                }}
+                onClick={onOpenDocuments}
                 type="button"
               >
-                <span
-                  aria-hidden="true"
-                  className={`absolute inset-x-0 top-0 h-1 ${
-                    selected
-                      ? "bg-primary"
-                      : "bg-[var(--accura-pop)] opacity-72"
-                  }`}
-                />
-                <span className="flex items-start justify-between gap-3">
-                  <span className="flex min-w-0 items-center gap-2.5">
-                    <span
-                      className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
-                        selected
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-secondary text-primary"
-                      }`}
-                    >
-                      <Icon aria-hidden="true" className="size-4" />
-                    </span>
-                    <span className="truncate font-medium">{module.name}</span>
-                  </span>
-                  <ModuleStatus tone={module.tone} value={module.status} />
-                </span>
-                <span className="mt-4 flex items-baseline gap-2">
-                  <span className="identifier font-medium text-2xl">
-                    {module.metric}
-                  </span>
-                  <span className="text-muted-foreground text-sm">
-                    {module.detail}
-                  </span>
-                </span>
+                {body}
               </button>
+            ) : (
+              <div className={shell} key={module.name}>
+                {body}
+              </div>
             );
           })}
         </div>
       </section>
 
       <section
-        aria-labelledby="records-heading"
+        aria-label="Records"
         className="flex scroll-mt-24 flex-col gap-3"
         ref={recordsRef}
       >
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="font-bold text-lg" id="records-heading">
-              Records
-            </h2>
-            <p className="text-muted-foreground text-sm">
-              Prioritized work assigned to you.
-            </p>
-          </div>
-          <Select
-            items={priorityOptions}
-            onValueChange={(value) => setPriority(String(value))}
-            value={priority}
+        {/* The same shape as Settings > Users: one card holding the heading,
+            the tabs, a filter row and the table. The heading and tabs had sat
+            loose on the canvas above a separate table card, so the section
+            read as three things rather than one. */}
+        <SectionCard>
+          <SectionHeading
+            description="Prioritized work assigned to you."
+            title="Records"
+          />
+
+          <Tabs
+            onValueChange={(value) =>
+              setActiveTab(value as "actions" | "upcoming")
+            }
+            value={activeTab}
           >
-            <SelectTrigger aria-label="Filter by priority" className="w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectPopup>
-              {priorityOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectPopup>
-          </Select>
-        </div>
+            <TabsList aria-label="Record views">
+              <TabsTab value="actions">My actions (30)</TabsTab>
+              <TabsTab value="upcoming">Upcoming (2)</TabsTab>
+            </TabsList>
+          </Tabs>
 
-        <Tabs
-          onValueChange={(value) =>
-            setActiveTab(value as "actions" | "upcoming")
-          }
-          value={activeTab}
-        >
-          <TabsList aria-label="Record views" className="px-0">
-            <TabsTab value="actions">My actions (30)</TabsTab>
-            <TabsTab value="upcoming">Upcoming (2)</TabsTab>
-          </TabsList>
-        </Tabs>
+          <div className="flex flex-wrap items-center gap-3 px-5 py-4">
+            <Select
+              items={priorityOptions}
+              onValueChange={(value) => setPriority(String(value))}
+              value={priority}
+            >
+              <SelectTrigger aria-label="Filter by priority" className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectPopup>
+                {priorityOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectPopup>
+            </Select>
+            <span className="text-muted-foreground text-sm">
+              {visibleRecords.length}{" "}
+              {visibleRecords.length === 1 ? "record" : "records"}
+            </span>
+          </div>
 
-        <div className="overflow-hidden rounded-xl border bg-card shadow-xs">
-          <Table>
-            <TableHeader className="bg-secondary/72">
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="min-w-[300px] ps-4 text-xs">
-                  Record
-                </TableHead>
-                <TableHead className="min-w-[190px] text-xs">Status</TableHead>
-                <TableHead className="w-[120px] text-xs">Priority</TableHead>
-                <TableHead className="w-[170px] text-xs max-[1120px]:hidden">
-                  Module
-                </TableHead>
-                <TableHead className="w-[140px] text-xs">Due date</TableHead>
-                <TableHead className="w-12 pe-3 text-right text-xs">
-                  <span className="sr-only">View</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visibleRecords.length > 0 ? (
-                visibleRecords.map((record) => (
-                  <TableRow className="hover:bg-secondary/48" key={record.id}>
-                    <TableCell className="ps-4">
-                      <button
-                        className="identifier font-medium text-primary outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring"
-                        onClick={
-                          record.module === "Documents"
-                            ? onOpenDocuments
-                            : undefined
-                        }
-                        type="button"
-                      >
-                        {record.id}
-                      </button>
-                      <p className="mt-1 text-muted-foreground text-xs">
-                        {record.description}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <Badge size="lg" variant="secondary">
-                        {record.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        size="sm"
-                        variant={
-                          record.priority === "High" ? "destructive" : "warning"
-                        }
-                      >
-                        {record.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="max-[1120px]:hidden">
-                      {record.module}
-                    </TableCell>
-                    <TableCell>
-                      <span className="identifier text-sm">
-                        {record.dueDate}
-                      </span>
-                      {record.lateBy && (
-                        <p className="mt-1 text-destructive text-xs">
-                          {record.lateBy}
+          <div className="border-t">
+            <Table>
+              <TableHeader className="bg-secondary/72">
+                <TableRow className="hover:bg-transparent">
+                  {/* Split, as the Documents register splits Document ID
+                      from Name: the ID is what a user searches and quotes,
+                      and it is the link — so it gets its own column rather
+                      than sitting above a description nobody can scan down. */}
+                  <TableHead className="w-[210px] ps-5 text-xs">
+                    Record
+                  </TableHead>
+                  <TableHead className="min-w-[240px] text-xs">Name</TableHead>
+                  <TableHead className="min-w-[190px] text-xs">
+                    Status
+                  </TableHead>
+                  <TableHead className="w-[120px] text-xs">Priority</TableHead>
+                  <TableHead className="w-[170px] text-xs max-[1120px]:hidden">
+                    Module
+                  </TableHead>
+                  <TableHead className="w-[140px] text-xs">Due date</TableHead>
+                  <TableHead className="w-12 pe-5 text-right text-xs">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visibleRecords.length > 0 ? (
+                  visibleRecords.map((record) => (
+                    <TableRow className="hover:bg-secondary/48" key={record.id}>
+                      <TableCell className="ps-5">
+                        {/* The same link treatment as the register's Document
+                            ID: Brand 900 at rest, underline on hover. */}
+                        <button
+                          className="identifier block max-w-[190px] truncate text-left font-medium text-[var(--accura-brand-900)] text-sm underline decoration-transparent underline-offset-2 outline-none transition-colors hover:decoration-current focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring"
+                          onClick={
+                            record.module === "Documents"
+                              ? onOpenDocuments
+                              : undefined
+                          }
+                          title={record.id}
+                          type="button"
+                        >
+                          {record.id}
+                        </button>
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className="block max-w-[260px] truncate"
+                          title={record.description}
+                        >
+                          {record.description}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{record.status}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {/* `destructive` is solid red on white and was the
+                          loudest thing on the screen; every other status in
+                          Accura uses the 8% tint. */}
+                        <Badge
+                          variant={
+                            record.priority === "High" ? "error" : "warning"
+                          }
+                        >
+                          {record.priority}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="max-[1120px]:hidden">
+                        {record.module}
+                      </TableCell>
+                      <TableCell>
+                        <span className="identifier text-sm">
+                          {record.dueDate}
+                        </span>
+                        {record.lateBy && (
+                          <p className="mt-1 text-destructive text-xs">
+                            {record.lateBy}
+                          </p>
+                        )}
+                      </TableCell>
+                      {/* A “…” menu, the same row action Settings > Users
+                        carries, instead of a bare eye icon. */}
+                      <TableCell className="pe-5 text-right">
+                        <Menu>
+                          <MenuTrigger
+                            render={
+                              <Button
+                                aria-label={`More actions for ${record.id}`}
+                                size="icon-sm"
+                                variant="ghost"
+                              />
+                            }
+                          >
+                            <MoreHorizontalIcon aria-hidden="true" />
+                          </MenuTrigger>
+                          <MenuPopup align="end">
+                            <MenuItem
+                              onClick={
+                                record.module === "Documents"
+                                  ? onOpenDocuments
+                                  : undefined
+                              }
+                            >
+                              <EyeIcon aria-hidden="true" />
+                              View details
+                            </MenuItem>
+                          </MenuPopup>
+                        </Menu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell className="h-48 text-center" colSpan={7}>
+                      <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
+                        <CheckCircleIcon
+                          aria-hidden="true"
+                          className="size-8 text-primary"
+                        />
+                        <p className="font-medium">Nothing in this view</p>
+                        <p className="text-muted-foreground text-sm">
+                          Try another priority or switch record tabs.
                         </p>
-                      )}
-                    </TableCell>
-                    <TableCell className="pe-3 text-right">
-                      <Button
-                        aria-label={`View ${record.id}`}
-                        onClick={
-                          record.module === "Documents"
-                            ? onOpenDocuments
-                            : undefined
-                        }
-                        size="icon-sm"
-                        variant="ghost"
-                      >
-                        <EyeIcon aria-hidden="true" />
-                      </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell className="h-48 text-center" colSpan={6}>
-                    <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
-                      <CheckCircleIcon
-                        aria-hidden="true"
-                        className="size-8 text-primary"
-                      />
-                      <p className="font-medium">Nothing in this view</p>
-                      <p className="text-muted-foreground text-sm">
-                        Try another priority or switch record tabs.
-                      </p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </SectionCard>
       </section>
     </div>
   );

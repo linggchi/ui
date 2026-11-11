@@ -846,9 +846,42 @@ function AppSidebar({
           ))}
         </nav>
 
+        {/* The lime finally has a job.
+            `--accura-pop` and `--accura-pop-soft` had been defined in
+            globals.css and used in exactly one place — a decorative stripe on
+            the dashboard cards, removed on 2026-11-11 for looking like a
+            smear. A single warm accent against the brand's dark teal is what
+            the colour is for; one card in the rail is enough to make it read
+            as deliberate rather than stray. */}
+        {!collapsed && (
+          <section
+            aria-labelledby="getting-started-heading"
+            className="mx-2 mt-auto mb-2 overflow-hidden rounded-xl bg-[linear-gradient(140deg,var(--accura-pop)_0%,var(--accura-pop-soft)_100%)] p-4 text-[var(--accura-brand-950-darkshade)]"
+          >
+            <p
+              className="font-bold text-sm leading-tight"
+              id="getting-started-heading"
+            >
+              Getting started
+            </p>
+            <p className="mt-1 text-xs leading-snug opacity-80">
+              Set up your document types, numbering and departments before your
+              team starts filing.
+            </p>
+            <Button
+              className="mt-3 w-full bg-[var(--accura-brand-950-darkshade)] text-white hover:bg-[var(--accura-brand-950-darkshade)]/90"
+              onClick={() => onNavigate("settings")}
+              size="sm"
+            >
+              Start setup
+              <ChevronRightIcon aria-hidden="true" />
+            </Button>
+          </section>
+        )}
+
         <nav
           aria-label="Support navigation"
-          className="mt-auto flex flex-col gap-1 border-sidebar-border border-t p-2"
+          className={`flex flex-col gap-1 border-sidebar-border border-t p-2 ${collapsed ? "mt-auto" : ""}`}
         >
           {secondaryNavItems.map(({ icon, label, module }) => (
             <SidebarNavItem

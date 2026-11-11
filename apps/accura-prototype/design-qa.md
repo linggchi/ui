@@ -140,6 +140,61 @@ The implementation now intentionally differs from the older Accura demo and the 
 
 ## Comparison History
 
+### Iteration 52 – The lime gets a job
+
+A **Getting started** card at the foot of the navigation rail, above the support links — the shape the user's reference (Wrangle) uses for its trial card.
+
+- **It is built from `--accura-pop`.** That token and `--accura-pop-soft` had been sitting in `globals.css` with exactly one use between them: the decorative stripe on the dashboard cards, removed two iterations ago for reading as a smear. The colour was not the problem — spreading it thinly across five cards was. One warm card against the brand's dark teal is what a pop colour is for, and having a single deliberate home makes it part of the system rather than a stray value nobody could place.
+- Lime → soft-lime gradient at 140°, brand-950 text, and a brand-950 button so the action reads as the darkest thing on the lightest surface in the rail.
+- Contrast measured on both ends of the gradient: title **10.15 / 11.51**, description (80% opacity) **6.03 / 6.54**, button label **12.67**. All well past AA.
+- **Hidden when the rail is collapsed.** At 64px there is no room for a sentence, and a cropped promo is worse than none. The support nav takes `mt-auto` in that state so the foot of the rail still sits where it did.
+- The button goes to Settings, which is where the three things it names — document types, numbering, departments — are configured. Measured: it lands on Settings.
+- Implementation evidence: `implementation-getting-started.jpg`.
+- Not built: the card is always shown. A real one would track setup progress and disappear when it is done, which needs state the prototype does not keep.
+- Verification: `tsc --noEmit` and `biome check` pass.
+
+### Iteration 51 – Records takes the shape Settings already had
+
+The dashboard's Records section was built before Settings settled the list-screen shape, and never caught up.
+
+- **It read as three things instead of one.** The heading and description sat loose on the canvas, the priority filter floated at the far right of that line, the tabs sat under them on the canvas too, and the table was a separate card below. Settings > Users puts all four inside one `SectionCard`: heading band, tabs, a filter row, then the table behind a `border-t`. Records does the same now, with the shared `SectionCard` and `SectionHeading` rather than its own `h2`.
+- **The priority filter moved into the filter row**, where Users keeps its search. It had been in the heading line, which in Users is where the primary action lives — so a filter was sitting in the slot reserved for "Add User".
+- **"High" was the last saturated red in the product.** The same `destructive` badge I removed from the overview cards an hour earlier was still here, five rows of it. Measured before: solid red. After: `oklab(… / 0.08)` with red-700 text — the 8% tint the register and Settings both use.
+- **The row action is a “…” menu**, the same as the Users table, instead of a bare eye icon with no label beside it. Measured: five row menus, zero eye buttons.
+- A record count sits beside the filter, as Users has beside its search.
+- **The ID and the name are two columns**, as the Documents register splits Document ID from Name. They had been stacked in one cell — the ID as a link with the description in small grey text under it — so neither could be scanned down the page: the eye had to read two lines per row to find one value. The ID takes the register's exact link treatment, measured identical: `rgb(23, 94, 65)` (Brand 900) with the underline transparent at rest. Columns now read **Record · Name · Status · Priority · Module · Due date · Actions**.
+- Implementation evidence: `implementation-dashboard-records.jpg`.
+- Verification: `tsc --noEmit` and `biome check` pass.
+
+### Iteration 50 – One coloured mark per card
+
+Iteration 49 fixed the *meaning* of the dashboard card's colour and not the *amount* of it. The user's reply — "nhìn vẫn bị dơ do trông nhiều màu quá" — was right, and the measurement says why.
+
+- **Each card was carrying three coloured marks for one fact.** A state-coloured rule across the top, a state-tinted icon, and a state-tinted badge — all saying "Overdue". Five cards × three marks is fifteen pieces of colour for five numbers. Giving the stripe a meaning made it defensible; it did not make it necessary.
+- **The rule is gone, the icon is neutral, and the badge is the only colour.** The badge already says the state in words, so it is the one mark that cannot be removed without losing information. The icon takes the brand's soft surface with a teal glyph, the same on every card.
+- **Radius 20px**, up from 12.
+- **The odd border on Documents was a selection state that selected nothing.** `selectedModule` was written and read in exactly one place: its own styling. It filtered no list and changed no other content — it just gave one card a brand border and a ring on load, which is what the user spotted. Deleted.
+- **Only Documents is a button now.** It is the only module built, so it was the only card whose click did anything once the dead selection state went; the other four were buttons that lifted on hover and led nowhere. They are plain cards. A control that looks pressable and does nothing is worse than one that does not look pressable.
+- Measured across all five: `border-radius: 20px`, one border colour `oklab(0 0 0 / 0.08)`, no ring, no rule — on every card, with one `<button>` among four `<div>`s.
+- Implementation evidence: `implementation-dashboard-overview.jpg`.
+- Verification: `tsc --noEmit` and `biome check` pass.
+
+### Iteration 49 – The dashboard cards stop decorating and start reporting
+
+Reworked against a reference the user supplied (a Ferndesk reporting overview), in Accura's own palette rather than the reference's.
+
+> **Partly superseded the same day by Iteration 50.** The state-coloured rule described below was removed: making the stripe mean something was not enough, because the card still carried three coloured marks for one fact.
+
+- **The top rule was a lime smear.** `--accura-pop` (`#d9f25f`) sat across every card at 72% opacity — the same on all five, regardless of state. Grepping it found the colour is used in **exactly one place in the whole prototype**, which is why it read as dirt rather than as part of the system: nothing else on any screen ever repeats it. The rule now carries the **state** — emerald for On track, amber for Due soon, red for Overdue — which is the one thing a reader scanning five modules is actually looking for.
+- **Selection and state had been fighting over the same stripe.** Selecting a card turned its rule brand-green *and* filled its icon *and* added a ring: three mechanisms for one bit, and a selected Overdue card lost the fact that it was overdue. Selection is now the ring and border alone; the rule is always the state.
+- **The badges were the only saturated red in the product.** `destructive` is solid red on white; every other status in Accura uses the 8% tint (`error`, `warning`, `success`). Three solid red chips in a row shouted over the numbers they were labelling. Measured after: `oklab(… / 0.08)` surfaces with red-700, amber-700 and emerald-700 text — the same treatment as the register's status column.
+- **The number now owns a line.** It had shared one with the detail sentence, so the figure the card exists to show competed with a line of grey text. It is `text-3xl` tabular on its own line, the module name under it, the detail muted beneath — the reference's order, which puts the value first.
+- **A real bug in the copy.** Training's detail string began with its own metric — `"0 overdue · of 1 user"` next to a metric of `0` rendered as "**0 0 overdue** · of 1 user". Only that one row had it; the others read correctly. Fixed in the data, not by hiding it.
+- The icon moved from a grey square to a tint of the state colour, so the card has one accent rather than a neutral chip and a coloured stripe disagreeing.
+- **The gap is deliberate, and settled.** Five modules in a three-column grid leave a hole in the second row. A five-column row fits at `xl` but truncates captions like "due within 14 days · of 13 open" — tidying the layout at the cost of the data is the wrong trade. Confirmed by the user on 2026-11-11; the catalogue entry is Ready.
+- Implementation evidence: `implementation-dashboard-overview.jpg`.
+- Verification: `tsc --noEmit` and `biome check` pass.
+
 ### Iteration 48 – Approving asks first, and the shell says who you are
 
 - **Approving had nothing in front of it.** The signature step was removed on 2026-11-10 as built-ahead-of-requirement, and nothing replaced it — so one click recorded an auditable decision. Rejection kept a dialog because a reason is mandatory; approval, the more consequential of the two, kept none. It now confirms, naming the document, the person it will be recorded against, and the consequence. Measured on `ACME-URS-2026-000005` as Sarah Johnson: *"…recorded against Sarah Johnson and appears in the audit trail. 1 other Reviewer must still approve before the document moves to In Approval."* Approving then left it In Review at 1 of 2, as it should.

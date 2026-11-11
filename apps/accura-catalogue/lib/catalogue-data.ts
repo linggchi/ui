@@ -201,7 +201,8 @@ export const entries: CatalogueEntry[] = [
     rules: [
       "Border-only top bar — no separate fill plane.",
       "Global search with a ⌘K shortcut affordance.",
-      "Notification bell with a count badge; identity cluster at the inline end.",
+      "Notification bell with a count badge; identity cluster at the inline end, which follows the prototype role switcher beside it.",
+      "A single Getting started card in the lime pop colour sits at the foot of the rail, above the support links, and is hidden when the rail is collapsed.",
     ],
     sources: [{ label: "QA", where: "design-qa.md · Iteration 13 / 14 / 17" }],
     status: "draft",
@@ -261,6 +262,64 @@ export const entries: CatalogueEntry[] = [
     status: "ready",
     summary: "Five-tier button hierarchy, one primary action per context.",
     title: "Action Priority (Buttons)",
+  },
+  {
+    appliedIn: ["Settings > Users.", "The Dashboard's Records section."],
+    consistency:
+      "Settled by Settings > Users; the Dashboard's Records section was brought onto it on 2026-11-11, having been built before the pattern existed.",
+    group: "patterns",
+    id: "list-screen",
+    rules: [
+      "One card holds the heading band, the tabs, the filter row and the table — not a heading loose on the canvas above a separate table card.",
+      "The heading line holds the section's primary action. A filter belongs in the filter row, not in the slot reserved for Add.",
+      "The filter row carries the count of what is currently shown.",
+      "The table sits behind a border-t, with the Zinc 50 header row.",
+      "The row action is a “…” menu, never a bare icon button — so a second action can be added without redesigning the column.",
+      "An identifier and a name are two columns, never stacked in one cell: stacked, neither can be scanned down the page.",
+      "The identifier carries the register's link treatment — Brand 900, underline on hover — wherever it appears.",
+      "Status and priority badges use the 8% semantic tints, the same as the register.",
+    ],
+    sources: [
+      { label: "Rule", where: "docs/rules/ui-hierarchy.md §List screens" },
+      { label: "QA", where: "design-qa.md · Iteration 51" },
+      {
+        label: "Prototype",
+        where:
+          "components/settings-screens.tsx, components/dashboard-screen.tsx",
+      },
+    ],
+    status: "ready",
+    summary:
+      "One card per list section: heading, tabs, filter row with a count, table, “…” row menu.",
+    title: "List Screen",
+  },
+  {
+    appliedIn: ["The Dashboard's Overview grid of quality modules."],
+    consistency:
+      "Reworked twice on 2026-11-11: first the lime rule became state-coloured, then it was removed altogether. One coloured mark per card now.",
+    group: "patterns",
+    id: "metric-card",
+    rules: [
+      "One coloured mark per card: the status badge, which states the state in words. No coloured rule, no tinted icon — three marks for one fact is what made the grid noisy.",
+      "Making a decoration meaningful is not the same as needing it: a state-coloured rule was defensible and still removed.",
+      "Before adding a decorative accent, grep the token: a colour used in exactly one place reads as a mistake, not as a system.",
+      "Radius 20px; one border colour and no ring, on every card in the grid.",
+      "Only a card whose click does something is a button. The rest are plain cards.",
+      "A selected state that nothing reads is not a state — it was giving one card a different border for no reason.",
+      "The metric owns its own line, above the module name, with the detail muted beneath.",
+      "Status badges use the 8% semantic tints, the same as the register — not saturated destructive, which shouts over the numbers it labels.",
+      "The metric and its caption never repeat each other: a detail string starting with the metric renders as “0 0 overdue”.",
+      "The grid keeps its natural wrap. Five cards in three columns leave a gap in the second row, and that is accepted: narrowing the columns to close it would truncate the detail strings.",
+    ],
+    sources: [
+      { label: "Rule", where: "docs/rules/ui-hierarchy.md §Metric cards" },
+      { label: "QA", where: "design-qa.md · Iteration 49" },
+      { label: "Prototype", where: "components/dashboard-screen.tsx" },
+    ],
+    status: "ready",
+    summary:
+      "Dashboard module cards: state-coloured rule, metric on its own line, soft semantic badges.",
+    title: "Metric Card",
   },
   {
     appliedIn: [

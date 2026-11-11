@@ -85,6 +85,31 @@ This went wrong three times in two days — *Document category*, *Reference docu
 - **A form whose footer holds the commitment actions also holds the way out.** A Cancel that discards silently is the thing to avoid, not the Cancel itself: route it through the same confirmation as the breadcrumb and it cannot lose work. Asking a user to scroll back to a breadcrumb to leave is not a safeguard.
 - Progress through a multi-party stage is held **per party**, with the decision recorded against the person who acted. A single shared flag cannot express "three of four have approved", and it quietly lets one decision stand in for everyone's.
 
+## List screens
+
+One shape for every screen that lists records, set by Settings > Users and now followed by the Dashboard's Records section:
+
+- **One card holds the whole section** — heading band, tabs, filter row, table. A heading and tabs loose on the canvas above a separate table card read as three unrelated things.
+- **The heading line holds the section's primary action** (Add User). A filter does not belong there; it goes in the filter row with the result count, where the search sits.
+- **The filter row carries the count** of what is currently shown.
+- **The table sits behind a `border-t`**, with the Zinc 50 header row.
+- **The row action is a “…” menu**, never a bare icon button. One place for row actions means a second action can be added later without redesigning the column.
+- **An identifier and a name are two columns**, never stacked in one cell. Stacked, neither can be scanned down the page — the eye has to read two lines per row to find one value. The identifier keeps the register's link treatment (Brand 900, underline on hover) wherever it appears.
+- **Status and priority use the 8% semantic tints**, never saturated `destructive` — see §Badges.
+
+## Metric cards
+
+- **One coloured mark per card, and it is the one that carries words.** The dashboard card went through two wrong answers: a lime rule used nowhere else in the product, then a state-coloured rule — which at least meant something, but left each card with a coloured stripe, a tinted icon and a tinted badge all saying "Overdue". Five cards × three marks is fifteen pieces of colour for five numbers. Keep the badge, which states the status in words; drop the rest.
+- **Making a decoration meaningful is not the same as needing it.** Giving the stripe a job made it defensible, not necessary. Ask whether the card loses information without it.
+- Before adding a decorative accent, grep the token. `--accura-pop` appeared in exactly one place in the prototype and read as a mistake because of it.
+- **A pop colour wants one home, not a thin spread.** `--accura-pop` failed as a stripe across five dashboard cards and works as a single Getting started card in the navigation rail. The test is whether a reader can say what the colour means; spread over everything it means nothing, used once against the brand's dark surface it is obviously the thing asking for attention.
+- **A card that looks pressable does something.** Four of the five module cards lifted on hover and led nowhere once a dead selection state was removed; they are plain cards now, and only the built module is a button.
+- **A selected state that drives nothing is not a state.** `selectedModule` was written and read in one place — its own styling — so it gave one card a different border on load and meant nothing. Before styling a selection, check what reads it.
+- **The number owns its own line**, above the label, with the detail muted beneath. Sharing a line with a sentence makes the figure the card exists to show compete with grey text.
+- **Status badges on a dashboard use the same tints as everywhere else** — the 8% semantic surfaces, not saturated `destructive`. Several saturated chips in one grid shout over the numbers they label.
+- A metric and its caption must not repeat each other. A detail string that starts with the metric renders as "0 0 overdue".
+- **Let the grid wrap where it wraps.** Five cards in three columns leave a gap in the second row; closing it by narrowing the columns truncates the captions. Tidying the layout at the cost of the data is the wrong trade. Settled 2026-11-11.
+
 ## Badges
 
 - One badge size across the product: 22 px tall with 12 px text. A filled status badge and an outline metadata badge appear in the same table row, and two heights on two baselines read as a mistake.
