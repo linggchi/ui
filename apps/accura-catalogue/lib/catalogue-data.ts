@@ -268,7 +268,7 @@ export const entries: CatalogueEntry[] = [
       "Role / module / document-type tags (outline, metadata).",
     ],
     consistency:
-      "Filled-vs-outline rule is settled. The Documents status set was extended for US-006 (Superseded, Obsolete) and is not yet QA-logged.",
+      "Filled-vs-outline rule is settled, and the six document statuses each have their own filled tint as of 2026-11-11. Both the register and the details view read one shared map, components/document-status.ts.",
     group: "components",
     id: "badges",
     rules: [
@@ -276,6 +276,10 @@ export const entries: CatalogueEntry[] = [
       "Filled semantic badge = actual status / severity / lifecycle meaning.",
       "Outline badge = categorical metadata (role, module, document-type).",
       "Status colour must not be replaced by primary/secondary styling.",
+      "Every status has its own hue; no status borrows the outline treatment, because outline means metadata. Superseded used to, and “Superseded · Controlled” in one row then read as two badges of the same kind.",
+      "Document statuses: Draft secondary · In Review warning · In Approval info · Approved success · Superseded violet (purple-100 on purple-800) · Obsolete error.",
+      "Superseded is violet, not amber or red: it is a handover state and the document is still in use until its successor takes effect, so a cautionary colour would misread it.",
+      "One map, one place: components/document-status.ts. Two screens each holding their own copy is how Superseded stayed outline in both.",
     ],
     sources: [
       {
@@ -288,10 +292,10 @@ export const entries: CatalogueEntry[] = [
           "DECISIONS.md · 2026-11-04 Metadata badges use outline hierarchy",
       },
       { label: "QA", where: "design-qa.md · Iteration 20 — outline badges" },
+      { label: "QA", where: "design-qa.md · Iteration 46 — status palette" },
+      { label: "Component", where: "components/document-status.ts" },
     ],
-    status: "draft",
-    statusNote:
-      "US-006 added Superseded (outline) and Obsolete (error) to the status set; needs a QA pass to confirm the extended mapping.",
+    status: "ready",
     summary:
       "Filled badges for status, outline badges for categorical metadata.",
     title: "Badges",
@@ -330,6 +334,11 @@ export const entries: CatalogueEntry[] = [
       "No helper text that only repeats the label or control.",
       "Disabled control changes surface (Zinc 100 recessed), not only opacity.",
       "A system-filled field is disabled with RECESSED_INPUT, not readOnly — readOnly renders as an ordinary editable field.",
+      "References are picked, never typed: a search field lists matching documents with their status, and clicking one adds it.",
+      "Linkable statuses are Draft, In Review, Approved and Superseded. Obsolete is withdrawn (US-016 AC-04); In Approval is excluded because the mockup omits it.",
+      "A picker never offers the document itself, and never the same document and version twice.",
+      "The same content keeps the same rank on every screen: Tags are a field of Document Information on the create form, the Draft editor and the details view — never a section on one of them.",
+      "An empty-state line (“None linked.”) is for saved content. On a form the input underneath already says the list is empty, so it is hidden while editing.",
       "Scoped to Tags: the Add control sits inside the input as an inline-end addon. It is a convenience for typing several short free-text values in a row, not a general form pattern — a field that picks from a known set (Reviewers, Departments, references) uses a combobox instead.",
     ],
     sources: [
@@ -404,6 +413,7 @@ export const entries: CatalogueEntry[] = [
   {
     appliedIn: [
       "Settings save / invitation confirmation (toast).",
+      "Documents save, register and approve confirmations (toast).",
       "Document filters & required next steps (inline alert).",
     ],
     consistency:
@@ -412,6 +422,8 @@ export const entries: CatalogueEntry[] = [
     id: "system-feedback",
     rules: [
       "Bottom-right toast for brief, non-blocking confirmation; auto-dismiss + dismiss control.",
+      "Every module uses it — Documents kept its own inline save banner until 2026-11-11, so one kind of message appeared two ways.",
+      "The toast clears any sticky footer on the screen; raise its bottom offset, not --toast-inset, which also drives width and the animations.",
       "Inline alert for persistent, blocking, or actionable information beside its content.",
       "Never replace validation errors with an ephemeral toast.",
     ],
@@ -661,7 +673,7 @@ export const entries: CatalogueEntry[] = [
       "No workflow stepper on an External document, or on a Superseded or Obsolete one: neither is at a current stage.",
       "Status badges reuse the register's variants, so one status reads the same in the list and in the details.",
       "Side panel order follows the mockup: Document Information → Attachments → Reference Documents → Approval.",
-      "Attachments and Reference Documents carry a count badge, and each reference group carries its own.",
+      "No count badge on a section heading in the read-only panel: the items are listed directly underneath. Added 2026-11-11, removed the same day.",
       "An item whose only action is to open it has no button: its own name is the link, in the register's Brand 900.",
       "A reference opens the version it names, or the newest row carrying that ID if that version has gone.",
       "Related and Referred are group headings with counts, not muted captions — one says what supports the document, the other what it cites.",
@@ -707,6 +719,8 @@ export const entries: CatalogueEntry[] = [
     rules: [
       "Progress is held per assigned Reviewer, not as one shared flag: each carries their own Pending or Approved badge.",
       "One approval clears one assigned slot — the actor's own, or the first outstanding one annotated “by <name>”.",
+      "Approve opens a confirmation naming the document, the person it is recorded against, and the consequence. It is not an electronic signature; it replaces nothing and is replaced by one when that is built.",
+      "A reviewer who has not decided is Awaiting, not Pending — the stored value, not just the label.",
       "The document stays In Review until every assigned Reviewer has approved; only the final one advances it.",
       "The outstanding count is stated in words beneath the route, and the action bar names who is still awaited.",
       "A user who is not entitled to decide gets no action bar at all — not a disabled one — and a banner saying why.",

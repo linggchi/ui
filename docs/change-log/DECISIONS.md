@@ -2,6 +2,30 @@
 
 This is the canonical history of Accura product, design-system, and prototype decisions. It records why a direction was chosen and preserves superseded directions. Current product facts live in `docs/product-knowledge/`; current rules live in `docs/rules/`; implemented changes are indexed in root `CHANGELOG.md`.
 
+## 2026-11-11 - A Superseded document can be cited as a reference
+
+**Status:** Divergence from the mockup's stated rule, settled by the user on 2026-11-11. The requirements repository is separate and was deliberately left unchanged.
+
+### Decision
+
+The reference picker offers documents in **Draft, In Review, Approved and Superseded** status. Obsolete is excluded, and so is In Approval.
+
+### Reasoning
+
+The mockup says, in its own words, "Link available documents in Draft, In Review, or Approved status" — Superseded is not in that list.
+
+But the same day we settled that a Superseded version **stays the one to follow** until its successor's Effective Date arrives. A document written during that window has to be able to cite the version actually in use; refusing the link would force the author either to cite a version nobody is following yet, or to cite nothing.
+
+It also follows from what the two closed statuses now mean. Superseded is a handover state with an end date; Obsolete is withdrawal, and `US-016` AC-04 puts it beyond active use **or linking** in as many words. Treating both as unlinkable collapsed a distinction we had just drawn.
+
+### What is still unsettled
+
+**In Approval remains excluded**, because the mockup leaves it out. That reads as deliberate — a document still under decision should probably not be cited — but it is nowhere stated as a rule. Ask the BA.
+
+### What this does not cover
+
+A reference to a Superseded version is shown exactly like any other. Whether the details screen should mark it — "this reference points at a superseded version" — is a separate question and is in the Refine pass backlog.
+
 ## 2026-11-11 - A previous version is Superseded on approval, not on the Effective Date
 
 **Status:** Answer to `PRD-002` open question 3, settled by the user on 2026-11-11. The question remains open in the requirements repository, which is separate and was deliberately left unchanged.
@@ -33,7 +57,27 @@ A Superseded version currently renders a status badge and nothing else. A user r
 
 Showing it means the details screen knowing the *family*, not just the one version: it has to find the successor and read its Effective Date. That is a real change, not a label, and it is listed in the Refine pass backlog in [`docs/agent-worklog.md`](../agent-worklog.md).
 
-## 2026-11-11 - A Draft keeps a Cancel action, guarded by the discard confirmation
+## 2026-11-11 - Approving is confirmed, because the signature step that used to guard it is gone
+
+**Status:** Addition not asked for by `US-012` AC-02 or `US-013` AC-02, directed by the user on 2026-11-11. The requirements repository is separate and was deliberately left unchanged.
+
+### Decision
+
+Selecting **Approve** — at the Review stage or the Approval stage — opens a confirmation naming the document and version, the person the decision will be recorded against, and what happens next: how many Reviewers still have to approve, or that the document becomes Approved with its Effective Date. Approving in the dialog records it.
+
+### Reasoning
+
+`PRD-002` defers electronic signature, and on 2026-11-10 the prototype's signature step was removed because it had been built ahead of the requirement. That removal left **nothing at all** between one click and a recorded, auditable decision — which in a QMS is the point of the whole module. Rejection kept a dialog only because a reason is mandatory; approval, the more consequential of the two, kept none.
+
+**A confirmation is not an electronic signature.** It captures no credential, performs no identity check and asks nothing of the user beyond reading what they are about to do. So this does not reinstate what `PRD-002` defers, and both ACs' "without an electronic-signature prompt" still holds.
+
+The dialog states the consequence rather than asking "Are you sure?", because the thing a reviewer needs to know is whether theirs is the last approval outstanding — the click means something different depending on the answer.
+
+### What would change this
+
+When electronic signature is built, this dialog is replaced by it, not kept alongside it. Two confirmations for one decision is worse than none.
+
+## 2026-11-11 - A Draft and the create form keep a Cancel action, guarded by the discard confirmation
 
 **Status:** Divergence from `US-014 - Edit Draft Document` AC-01 (requirements repository, baseline `c2cbd1f`), and a reversal of the 2026-11-10 pattern audit. Directed by the user on 2026-11-11 during the refine pass and **confirmed by the user the same day with the conflict stated** — so it is settled here, not provisional. The requirements repository is separate and was deliberately left unchanged; the conflict with AC-01 is for the BA to resolve upstream.
 
@@ -41,9 +85,11 @@ Showing it means the details screen knowing the *family*, not just the one versi
 
 The Draft editor's footer carries **Cancel** beside Save as draft and Submit for review. Cancel is the same exit as Back to Documents: with unsaved edits it opens the discard confirmation, and with none it leaves at once.
 
+**Create Document carries the same Cancel**, for both Controlled and External, added on 2026-11-11 for the same reason. The two screens are the same shape, so one of them keeping a way out and the other not would be its own inconsistency.
+
 ### Reasoning
 
-`US-014` AC-01 reads "no Cancel action is available for the Draft", and on 2026-11-10 a Cancel on the saved-Draft editor was **removed** for exactly that reason. So this reverses a correction, and that is worth being explicit about.
+`US-014` AC-01 reads "no Cancel action is available for the Draft", `US-007` AC-04 says the same of the creation form, and on 2026-11-10 a Cancel on the saved-Draft editor was **removed** for exactly that reason. So this reverses a correction, and that is worth being explicit about.
 
 What the rule guards against is a control that throws away work. A Cancel that discards silently does that; this one cannot. It routes through the same confirmation as the breadcrumb, which names the document, says the saved Draft is unchanged, and offers **Continue editing** first.
 

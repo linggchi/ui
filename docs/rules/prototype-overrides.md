@@ -26,7 +26,7 @@ replaces*; the reasoning belongs to the rule it links to.
 | One badge size: 22 px tall, 12 px text | `[data-slot="badge"]` in `apps/accura-prototype/app/globals.css` | COSS shrinking a badge to 18 px from `sm` up | [`ui-hierarchy.md`](ui-hierarchy.md) — Badges |
 | The segmented control track is Zinc 200 | `SegmentedControl` className in `apps/accura-prototype/components/create-document-screen.tsx` | COSS's lighter `bg-muted` track | [`ui-hierarchy.md`](ui-hierarchy.md) — Navigation Selection |
 | User rows render as an avatar, name, and email cluster | `UserIdentity` in the Settings screens | A plain name and email stack | [`user-identity.md`](user-identity.md) |
-| A `Prototype · Viewing as` role switcher on the document details screen | `PROTO_ROLES` and the dashed switcher bar in `apps/accura-prototype/components/document-flow-screens.tsx` | Nothing in the mockup — it exists only because authentication is not built | [`ui-hierarchy.md`](ui-hierarchy.md) — Gated actions and decision dialogs |
+| A `Prototype · Viewing as` role switcher in the top bar | `apps/accura-prototype/components/prototype-role.tsx` | Nothing in the mockup — it exists only because authentication is not built | [`ui-hierarchy.md`](ui-hierarchy.md) — Gated actions and decision dialogs |
 
 ## Notes
 
@@ -36,12 +36,25 @@ replaces*; the reasoning belongs to the rule it links to.
   re-derive them in a screen. They were duplicated per screen until
   2026-11-10, which is exactly how a screen drifted off them.
 
+- **Four shared modules now carry what more than one Documents screen needs.**
+  Each exists because the same thing had been declared twice and the two
+  copies drifted. Import from them; do not re-declare.
+
+  | Module | Holds | What drifted before it |
+  |---|---|---|
+  | `accura-form.tsx` | `FormLabel`, `RECESSED_INPUT`, `SectionCard`, `SectionHeading`, `Hint` | Each screen's own section header and disabled-field treatment |
+  | `document-directory.ts` | The people and departments list | The create form and the Draft editor each held a copy, with different members |
+  | `document-status.ts` | Status → badge treatment | The register and the details view each mapped Superseded to `outline` |
+  | `prototype-role.tsx` | `ProtoRole`, `PROTO_ROLES`, `canManage`, the switcher | The role was state in two screens, and the switcher rendered in both |
+
 - The **role switcher is prototype chrome, not a permission model.** It is
-  deliberately marked as such — a `Prototype` badge, a dashed border, muted
-  surface — so it is never mistaken for a screen to build. It exists so that
-  `US-012` AC-01's gate can be demonstrated from both sides while there is no
-  signed-in user. Delete it the moment real permissions arrive; do not grow
-  features on it.
+  deliberately marked as such — a `Prototype` badge beside it — so it is never
+  mistaken for a screen to build. It exists so that the eligibility gates in
+  `US-012` to `US-016` can be demonstrated from both sides while there is no
+  signed-in user. It sits in the **top bar**, beside the user it stands in
+  for; it was inside the document screens until 2026-11-11, where it sat
+  between a document's title and its workflow and read as part of the record.
+  Delete it the moment real permissions arrive; do not grow features on it.
 
 - `Input` applies its `className` to the wrapper span, not the inner `input`
   element, and styles the disabled state with `has-disabled:`. A `disabled:`

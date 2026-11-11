@@ -62,6 +62,11 @@ import {
   SectionHeading,
 } from "@/components/accura-form";
 import { departments, people } from "@/components/document-directory";
+import {
+  type ReferenceCandidate,
+  type ReferenceLink,
+  ReferencePicker,
+} from "@/components/reference-picker";
 
 // US-007 AC-02: Document Type options come from Settings > Documents >
 // Document Types. External Document (EXT) is excluded here because PRD-002
@@ -127,11 +132,20 @@ type UploadedFile = { name: string; sizeMb: number };
 type Attachment = UploadedFile & { description: string; title: string };
 
 export type CreatedDocument = {
+  approver: string;
+  attachments: { description: string; fileName: string; name: string }[];
   department: string;
   documentId: string;
   effectiveDate: string | null;
   name: string;
+  // Everything the form collected reaches the saved record. Until 2026-11-11
+  // only six fields did, so tags, references and the approval route were
+  // entered, validated — and then dropped on save.
+  related: ReferenceLink[];
+  referred: ReferenceLink[];
+  reviewers: string[];
   status: "Approved" | "Draft" | "In Review";
+  tags: string[];
   type: string;
 };
 
@@ -147,10 +161,13 @@ function registrationDate() {
 }
 
 export function CreateDocumentScreen({
+  candidates,
   nextSequence,
   onBack,
   onSaved,
 }: {
+  /** Every document that could be linked, for `US-007` AC-02's references. */
+  candidates: ReferenceCandidate[];
   nextSequence: number;
   onBack: () => void;
   onSaved: (created: CreatedDocument) => void;
@@ -159,6 +176,8 @@ export function CreateDocumentScreen({
   const [documentType, setDocumentType] = useState("");
   const [department, setDepartment] = useState("");
   const [tagDraft, setTagDraft] = useState("");
+  const [related, setRelated] = useState<ReferenceLink[]>([]);
+  const [referred, setReferred] = useState<ReferenceLink[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [primaryFile, setPrimaryFile] = useState<UploadedFile | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -182,6 +201,8 @@ export function CreateDocumentScreen({
     tags.length > 0 ||
     primaryFile !== null ||
     attachments.length > 0 ||
+    related.length > 0 ||
+    referred.length > 0 ||
     reviewers.length > 0 ||
     approver !== "";
 
@@ -252,13 +273,23 @@ export function CreateDocumentScreen({
     setError(null);
     const type = category === "external" ? EXTERNAL_TYPE : documentType;
     onSaved({
+      approver,
+      attachments: attachments.map((file) => ({
+        description: file.description || "Supporting file",
+        fileName: file.name,
+        name: file.title || file.name,
+      })),
       department,
       documentId: nextDocumentId(type, nextSequence),
       // US-010 AC-03: an External Document is effective from its registration
       // date. A controlled document has no effective date until it is approved.
       effectiveDate: status === "Approved" ? registrationDate() : null,
       name: name.trim(),
+      related,
+      referred,
+      reviewers,
       status,
+      tags,
       type,
     });
   };
@@ -287,8 +318,9 @@ export function CreateDocumentScreen({
     setError(null);
   };
 
-  // US-007 AC-04: there is no Cancel action; leaving with unsaved changes asks
-  // for confirmation first.
+  // US-007 AC-04: leaving with unsaved changes asks for confirmation first.
+  // The AC also says there is no Cancel action; the footer has one anyway, by
+  // the 2026-11-11 decision, and it routes here so it cannot lose work.
   const leave = () => (isDirty ? setConfirmDiscard(true) : onBack());
 
   const typeField = (
@@ -705,24 +737,26 @@ export function CreateDocumentScreen({
             <>
               <SectionCard>
                 <SectionHeading
-                  hint="Only documents in Draft, In Review or Approved status can be linked."
+                  hint="A Superseded document can be cited — it stays in use until its successor takes effect. An Obsolete one cannot, and neither can a document still In Approval."
                   title="Reference Documents"
                 />
-                <div className="flex flex-col gap-3 p-5">
-                  <Field>
-                    <FormLabel optional>Related documents</FormLabel>
-                    <Input
-                      placeholder="Search documents to link…"
-                      type="search"
-                    />
-                  </Field>
-                  <Field>
-                    <FormLabel optional>Referred documents</FormLabel>
-                    <Input
-                      placeholder="Search documents referenced…"
-                      type="search"
-                    />
-                  </Field>
+                {/* US-007 AC-02: References are optional, and until
+                    2026-11-11 these were two search boxes that did nothing. */}
+                <div className="flex flex-col gap-5 p-5">
+                  <ReferencePicker
+                    canEdit
+                    candidates={candidates}
+                    label="Related Documents"
+                    onChange={setRelated}
+                    selected={related}
+                  />
+                  <ReferencePicker
+                    canEdit
+                    candidates={candidates}
+                    label="Referred Documents"
+                    onChange={setReferred}
+                    selected={referred}
+                  />
                 </div>
               </SectionCard>
 
@@ -838,9 +872,18 @@ export function CreateDocumentScreen({
               Registering saves the document as Approved, effective today, with
               v1.0 assigned.
             </p>
-            <Button className="shrink-0" onClick={() => save("Approved")}>
-              Acknowledge &amp; Register
-            </Button>
+            {/* Cancel is the same exit as Back to Documents and runs the
+                same discard confirmation, so it cannot lose work. Settled on
+                2026-11-11 for the Draft editor; the create form keeps the
+                same shape. See DECISIONS.md. */}
+            <div className="flex shrink-0 items-center gap-2">
+              <Button onClick={leave} variant="ghost">
+                Cancel
+              </Button>
+              <Button onClick={() => save("Approved")}>
+                Acknowledge &amp; Register
+              </Button>
+            </div>
           </>
         ) : (
           <>
@@ -848,6 +891,9 @@ export function CreateDocumentScreen({
               The Document ID and version v1.0 are assigned on first save.
             </p>
             <div className="flex shrink-0 items-center gap-2">
+              <Button onClick={leave} variant="ghost">
+                Cancel
+              </Button>
               <Button onClick={() => save("Draft")} variant="outline">
                 Save as Draft
               </Button>

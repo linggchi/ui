@@ -117,3 +117,40 @@ button[aria-label] svg,
     display: none;
   }
 }
+
+/*
+ * Accura document status palette — the Superseded slot.
+ *
+ * Superseded had been an outline badge, which is the same treatment the
+ * Category badge uses, so "Superseded / Controlled" in one row read as two of
+ * the same kind of thing. Every other status is a filled semantic tint, so
+ * Superseded needed its own hue rather than the one neutral treatment.
+ *
+ * Violet is taken from Tailwind's purple scale: it is nowhere else in Accura,
+ * so it cannot be confused with success, warning, info or error, and it reads
+ * as "set aside" rather than as a problem — which an amber or red would have
+ * implied for a document that is still in use until its successor takes
+ * effect.
+ *
+ * Purple 800 on Purple 100 measures 7.39:1.
+ */
+:root {
+  --accura-status-superseded-surface: #f3e8ff; /* Tailwind purple-100 */
+  --accura-status-superseded-text: #6b21a8; /* Tailwind purple-800 */
+}
+
+/*
+ * Toasts clear the sticky record footer.
+ *
+ * The document detail and the editors carry a sticky footer at `bottom-2`
+ * that is about 58px tall, and the toast's own 32px offset put the
+ * confirmation directly on top of the Submit button the user had just
+ * pressed. Only the bottom offset is raised: `--toast-inset` also drives the
+ * viewport width and the enter/exit translate, so overriding the variable
+ * would move more than the one thing that needs moving.
+ *
+ * Keeps the settled bottom-right position (DECISIONS.md, 2026-11-04).
+ */
+[data-slot="toast-viewport"][data-position*="bottom"] {
+  bottom: 6rem;
+}

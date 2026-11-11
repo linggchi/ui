@@ -4,16 +4,6 @@ import { Avatar, AvatarFallback } from "@coss/ui/components/avatar";
 import { Badge } from "@coss/ui/components/badge";
 import { Button } from "@coss/ui/components/button";
 import {
-  Dialog,
-  DialogClose,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogPanel,
-  DialogPopup,
-  DialogTitle,
-} from "@coss/ui/components/dialog";
-import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
@@ -23,7 +13,6 @@ import {
   Menu,
   MenuItem,
   MenuPopup,
-  MenuSeparator,
   MenuTrigger,
 } from "@coss/ui/components/menu";
 import {
@@ -41,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@coss/ui/components/table";
+import { toastManager } from "@coss/ui/components/toast";
 import {
   Tooltip,
   TooltipPopup,
@@ -56,7 +46,6 @@ import {
   HelpCircle as CircleHelpIcon,
   ClipboardCheck as ClipboardCheckIcon,
   ClockRotateRight as FileClockIcon,
-  PagePlus as FilePlus2Icon,
   PageSearch as FileSearchIcon,
   MultiplePages as FilesIcon,
   Page as FileTextIcon,
@@ -73,9 +62,7 @@ import {
   FilterList as SlidersHorizontalIcon,
   WarningTriangle as TriangleAlertIcon,
   DeliveryTruck as TruckIcon,
-  User as UserRoundIcon,
   Tools as WrenchIcon,
-  Xmark as XIcon,
 } from "iconoir-react";
 import Image from "next/image";
 import type React from "react";
@@ -89,6 +76,13 @@ import {
   DocumentFlowScreen,
   type DocumentFlowView,
 } from "./document-flow-screens";
+import { statusBadgeLook } from "./document-status";
+import {
+  initialsOf,
+  type ProtoRole,
+  RoleSwitcher,
+  roleIdentity,
+} from "./prototype-role";
 import { SettingsScreen } from "./settings-screens";
 
 type AppModule = "dashboard" | "documents" | "settings";
@@ -191,7 +185,7 @@ type DocumentRecord = {
   referred?: { id: string; name: string; version: string }[];
   // US-012 AC-02: every assigned Reviewer must approve before the document
   // moves to In Approval, so the route is per-reviewer, not a single flag.
-  reviewers?: { decision: "Approved" | "Pending"; name: string }[];
+  reviewers?: { decision: "Approved" | "Awaiting"; name: string }[];
   // US-015 AC-02: the change summary saved with this version.
   revisionHistory?: string;
   status: DocumentStatus;
@@ -300,7 +294,7 @@ const documents: DocumentRecord[] = [
     ],
     reviewers: [
       { decision: "Approved", name: "Sarah Johnson" },
-      { decision: "Pending", name: "Priya Shah" },
+      { decision: "Awaiting", name: "Priya Shah" },
     ],
     status: "In Review",
     tags: ["Document control", "Requirements"],
@@ -435,8 +429,8 @@ const documents: DocumentRecord[] = [
       },
     ],
     reviewers: [
-      { decision: "Pending", name: "Sarah Johnson" },
-      { decision: "Pending", name: "Priya Shah" },
+      { decision: "Awaiting", name: "Sarah Johnson" },
+      { decision: "Awaiting", name: "Priya Shah" },
     ],
     status: "Draft",
     tags: ["Batch record", "Laboratory"],
@@ -585,8 +579,8 @@ const documents: DocumentRecord[] = [
       },
     ],
     reviewers: [
-      { decision: "Pending", name: "Amit Kothari" },
-      { decision: "Pending", name: "Emily Chen" },
+      { decision: "Awaiting", name: "Amit Kothari" },
+      { decision: "Awaiting", name: "Emily Chen" },
     ],
     status: "In Review",
     tags: ["Cleaning", "Validation"],
@@ -652,15 +646,36 @@ const configuredDocumentTypes: DocumentRecord["type"][] = [
 // US-007 AC-03: the saved document joins the list as v1.0 with the signed-in
 // user as Author and no effective date until it is approved.
 function toRecord(created: CreatedDocument): DocumentRecord {
+  const external = created.type === "External Document (EXT)";
   return {
+    ...(created.approver ? { approver: created.approver } : {}),
+    ...(created.attachments.length > 0
+      ? { attachments: created.attachments }
+      : {}),
     author: "Amit Kothari",
-    category:
-      created.type === "External Document (EXT)" ? "External" : "Controlled",
+    category: external ? "External" : "Controlled",
     department: created.department as DocumentRecord["department"],
     effectiveDate: created.effectiveDate,
     id: created.documentId,
     name: created.name,
+    // US-011 AC-02: an External Document has no References section at all, so
+    // nothing is carried even if the form held values before the switch.
+    ...(external || created.related.length === 0
+      ? {}
+      : { related: created.related }),
+    ...(external || created.referred.length === 0
+      ? {}
+      : { referred: created.referred }),
+    ...(created.reviewers.length > 0
+      ? {
+          reviewers: created.reviewers.map((name) => ({
+            decision: "Awaiting" as const,
+            name,
+          })),
+        }
+      : {}),
     status: created.status,
+    ...(created.tags.length > 0 ? { tags: created.tags } : {}),
     type: created.type as DocumentRecord["type"],
     version: "v1.0",
   };
@@ -685,23 +700,9 @@ const pageSizeOptions = [
 ];
 
 function StatusBadge({ status }: { status: DocumentStatus }) {
-  const variant = {
-    Approved: "success",
-    Draft: "secondary",
-    "In Approval": "info",
-    "In Review": "warning",
-    Obsolete: "error",
-    Superseded: "outline",
-  }[status] as
-    | "error"
-    | "info"
-    | "outline"
-    | "secondary"
-    | "success"
-    | "warning";
-
+  const look = statusBadgeLook(status);
   return (
-    <Badge size="lg" variant={variant}>
+    <Badge className={look.className} size="lg" variant={look.variant}>
       {status}
     </Badge>
   );
@@ -879,9 +880,14 @@ export function DocumentsPrototype() {
   const [department, setDepartment] = useState("all");
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
-  const [selectedDocument, setSelectedDocument] =
-    useState<DocumentRecord | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  /**
+   * Settled on 2026-11-04: a brief, non-blocking confirmation is a toast, and
+   * Settings has used one since. The Documents register had kept its own
+   * inline banner, so the same kind of message appeared two different ways
+   * depending on which module the user was in.
+   */
+  const notify = (message: string) =>
+    toastManager.add({ title: message, type: "success" });
   // Which row's action menu is open. The menu popup is portalled out of the
   // table, so once it opens the pointer has left the row and focus sits inside
   // the portal: neither :hover nor :focus-within still describes the row, and
@@ -892,6 +898,12 @@ export function DocumentsPrototype() {
   );
 
   const [openMenuRow, setOpenMenuRow] = useState<string | null>(null);
+  /**
+   * Prototype chrome. It belongs beside the signed-in user it stands in for,
+   * not inside a document screen — there it sat between the document's title
+   * and its workflow and read as part of the record.
+   */
+  const [protoRole, setProtoRole] = useState<ProtoRole>("reviewer");
 
   // US-007 AC-03 saves the new document and returns to the list, so the rows
   // are state rather than the module-level sample array.
@@ -1052,7 +1064,6 @@ export function DocumentsPrototype() {
     else if (document.status === "Superseded") navigateToView("superseded");
     else if (document.status === "Obsolete") navigateToView("obsolete");
     else navigateToView("approved");
-    setSelectedDocument(null);
   };
 
   return (
@@ -1069,7 +1080,10 @@ export function DocumentsPrototype() {
 
       <div className="min-w-0 flex-1">
         <header className="sticky top-0 z-20 flex h-16 items-center border-border border-b bg-[var(--accura-canvas)] p-3">
-          <InputGroup className="h-10 max-w-2xl bg-background shadow-xs">
+          {/* 300px: the global search is a shortcut, not the page's subject. At
+              max-w-2xl it was the widest thing in the bar and pulled the eye
+              before the module did. */}
+          <InputGroup className="h-10 w-full max-w-[300px] bg-background shadow-xs">
             <InputGroupAddon>
               <SearchIcon aria-hidden="true" />
             </InputGroupAddon>
@@ -1081,7 +1095,7 @@ export function DocumentsPrototype() {
                   setActiveModule("documents");
                   setQuery(globalQuery.trim());
                   setPage(1);
-                  setNotice(
+                  notify(
                     `Showing document matches for “${globalQuery.trim()}”.`,
                   );
                 }
@@ -1102,6 +1116,8 @@ export function DocumentsPrototype() {
             </InputGroupAddon>
           </InputGroup>
           <div className="ms-auto flex items-center gap-2">
+            <RoleSwitcher onRoleChange={setProtoRole} role={protoRole} />
+            <div className="mx-1 h-7 w-px bg-border max-lg:hidden" />
             <Button
               aria-label="Notifications, 3 unread"
               className="relative overflow-visible"
@@ -1114,14 +1130,21 @@ export function DocumentsPrototype() {
               </span>
             </Button>
             <div className="mx-1 h-7 w-px bg-border" />
+            {/* The identity follows the role the prototype is standing in
+                for: saying "Assigned Reviewer" while the avatar still reads
+                Amit Kothari tells the viewer two things at once. */}
             <Avatar className="[--avatar-size:--spacing(8)]">
               <AvatarFallback className="bg-[var(--accura-brand-150-lightshade)] text-[var(--accura-brand-950-darkshade)]">
-                AK
+                {initialsOf(roleIdentity(protoRole).user)}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0 max-sm:hidden">
-              <p className="truncate font-medium text-sm">Amit Kothari</p>
-              <p className="text-muted-foreground text-xs">Member</p>
+              <p className="truncate font-medium text-sm">
+                {roleIdentity(protoRole).user}
+              </p>
+              <p className="truncate text-muted-foreground text-xs">
+                {roleIdentity(protoRole).label}
+              </p>
             </div>
           </div>
         </header>
@@ -1153,27 +1176,6 @@ export function DocumentsPrototype() {
                   Create document
                 </Button>
               </div>
-
-              {notice && (
-                <div
-                  className="flex items-center gap-3 rounded-xl border bg-secondary/72 px-4 py-3 text-sm"
-                  role="status"
-                >
-                  <FilePlus2Icon
-                    aria-hidden="true"
-                    className="size-4 shrink-0 text-primary"
-                  />
-                  <span className="flex-1">{notice}</span>
-                  <Button
-                    aria-label="Dismiss message"
-                    onClick={() => setNotice(null)}
-                    size="icon-xs"
-                    variant="ghost"
-                  >
-                    <XIcon aria-hidden="true" />
-                  </Button>
-                </div>
-              )}
 
               <section
                 aria-label="Document filters"
@@ -1423,11 +1425,14 @@ export function DocumentsPrototype() {
                                         <MoreHorizontalIcon aria-hidden="true" />
                                       </MenuTrigger>
                                     </span>
+                                    {/* View details opens the document, the
+                                        same as its ID. A dialog that summarised
+                                        the row and then offered "Open document"
+                                        put a step in front of the only thing
+                                        it could do. */}
                                     <MenuPopup align="end">
                                       <MenuItem
-                                        onClick={() =>
-                                          setSelectedDocument(document)
-                                        }
+                                        onClick={() => openDocument(document)}
                                       >
                                         <FileTextIcon aria-hidden="true" />
                                         View details
@@ -1435,11 +1440,6 @@ export function DocumentsPrototype() {
                                       <MenuItem>
                                         <FileClockIcon aria-hidden="true" />
                                         Version history
-                                      </MenuItem>
-                                      <MenuSeparator />
-                                      <MenuItem>
-                                        <UserRoundIcon aria-hidden="true" />
-                                        View owner
                                       </MenuItem>
                                     </MenuPopup>
                                   </Menu>
@@ -1562,11 +1562,12 @@ export function DocumentsPrototype() {
             </div>
           ) : activeView === "create" ? (
             <CreateDocumentScreen
+              candidates={records}
               nextSequence={records.length + 1}
               onBack={() => navigateToView("list")}
               onSaved={(created) => {
                 setRecords((current) => [toRecord(created), ...current]);
-                setNotice(
+                notify(
                   created.status === "Approved"
                     ? `${created.documentId} registered as Approved, effective ${created.effectiveDate}. Version v1.0 assigned.`
                     : `${created.documentId} saved as ${created.status}. Version v1.0 assigned.`,
@@ -1581,13 +1582,14 @@ export function DocumentsPrototype() {
             />
           ) : (
             <DocumentFlowScreen
+              candidates={records}
               document={openedDocument ?? records[0]}
               onApprove={approveOpenedDocument}
               onBack={() => navigateToView("list")}
               onCreateRevision={(revision) =>
                 createRevision(revision as DocumentRecord)
               }
-              onNotice={setNotice}
+              onNotice={notify}
               onOpenReference={(reference) => {
                 // US-011 AC-02: a reference is a link. It opens the version it
                 // names, or the newest one carrying that ID if that exact
@@ -1600,7 +1602,7 @@ export function DocumentsPrototype() {
                   ) ?? records.find((record) => record.id === reference.id);
                 if (target) openDocument(target);
                 else
-                  setNotice(
+                  notify(
                     `${reference.id} ${reference.version} is no longer in the register.`,
                   );
               }}
@@ -1608,76 +1610,12 @@ export function DocumentsPrototype() {
                 patchOpenedDocument(patch as Partial<DocumentRecord>)
               }
               onViewChange={navigateToView}
+              role={protoRole}
               view={activeView}
             />
           )}
         </main>
       </div>
-
-      <Dialog
-        onOpenChange={(open) => {
-          if (!open) setSelectedDocument(null);
-        }}
-        open={selectedDocument !== null}
-      >
-        <DialogPopup className="sm:max-w-lg">
-          {selectedDocument && (
-            <>
-              <DialogHeader>
-                <div className="flex items-center gap-2 pe-10">
-                  <StatusBadge status={selectedDocument.status} />
-                  <span className="identifier text-muted-foreground text-xs">
-                    {selectedDocument.version}
-                  </span>
-                </div>
-                <DialogTitle className="leading-tight">
-                  {selectedDocument.name}
-                </DialogTitle>
-                <DialogDescription className="identifier">
-                  {selectedDocument.id}
-                </DialogDescription>
-              </DialogHeader>
-              <DialogPanel>
-                <dl className="grid grid-cols-2 gap-x-6 gap-y-5 text-sm">
-                  <div className="flex flex-col gap-1">
-                    <dt className="text-muted-foreground">Category</dt>
-                    <dd className="font-medium">{selectedDocument.category}</dd>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <dt className="text-muted-foreground">Document type</dt>
-                    <dd className="font-medium">{selectedDocument.type}</dd>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <dt className="text-muted-foreground">Department</dt>
-                    <dd className="font-medium">
-                      {selectedDocument.department}
-                    </dd>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <dt className="text-muted-foreground">Author</dt>
-                    <dd className="font-medium">{selectedDocument.author}</dd>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <dt className="text-muted-foreground">Effective date</dt>
-                    <dd className="font-medium">
-                      {selectedDocument.effectiveDate ?? "Not effective"}
-                    </dd>
-                  </div>
-                </dl>
-              </DialogPanel>
-              <DialogFooter>
-                <DialogClose render={<Button variant="ghost" />}>
-                  Close
-                </DialogClose>
-                <Button onClick={() => openDocument(selectedDocument)}>
-                  Open document
-                  <ChevronRightIcon aria-hidden="true" />
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogPopup>
-      </Dialog>
     </div>
   );
 }

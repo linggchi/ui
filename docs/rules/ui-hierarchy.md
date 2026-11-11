@@ -68,9 +68,18 @@ This went wrong three times in two days — *Document category*, *Reference docu
 
 **One thing has one name across every screen.** The create form, the Draft editor and the details view all say *Document Information*, *Reference Documents* and *Approval* — not *Document Details* here and *Document Information* there. When a heading is added or renamed, grep the other screens for the old name before finishing.
 
+## Action bars on a record
+
+- **One named action, the rest in a menu.** A record screen accumulates actions — print, download, revise, obsolete, audit — and a row of six outline buttons gives them all the same weight and wraps on a laptop. Keep visible the one action a reader of *any* record in *any* status reaches for (on a document, the audit trail) and collapse the rest into **More actions**.
+- Inside that menu, a **status-gated** action is disabled rather than hidden — the menu is also where someone looks to learn the action exists. A **permission-gated** action is absent, because showing a user something they can never do is not information.
+- **A row menu holds only actions that do something.** A dead entry teaches the reader that the menu is decorative. And an item whose only outcome is to open a record opens it — a dialog that summarises the row and then offers "Open document" puts a step in front of the one thing it can do.
+- **The status strip at the foot of a record behaves the same whatever the status.** It was sticky while a decision was pending and static once the document was Approved, so the one element whose job is "where does this stand" moved depending on which document you opened.
+
 ## Gated actions and decision dialogs
 
 - When a user is not entitled to act, the action **is not shown**, and a banner says why. A disabled Approve still presents the decision as theirs and merely blocked; a requirement that says the record is "displayed in read-only mode" means the control is absent, not dimmed.
+- **A decision that is recorded and auditable is confirmed before it is recorded**, and the confirmation states the consequence rather than asking "Are you sure?" — whether this is the last approval outstanding changes what the same click means. A confirmation is not an electronic signature: it captures no credential and performs no identity check, so it does not reinstate a signature step a requirement defers. When a real signature arrives it replaces the confirmation; two confirmations for one decision is worse than none.
+- **Say what the record is waiting for, not what it lacks.** A reviewer who has not decided is **Awaiting**, not "Pending" — pending reads as "not yet asked". Rename the stored value, not just the label, so the two cannot drift.
 - A required field in a decision dialog keeps its submit control **live**. Pressing it with the field empty marks the field invalid and replaces the hint with the instruction; typing clears both. A disabled submit prevents the attempt instead of answering it, and leaves a user who cannot tell what is missing.
 - A dialog opened by setting state, rather than by a `DialogTrigger`, never receives `onOpenChange(true)` from Base UI. Per-use state — a reason, a draft, a validation flag — must be reset on the open **transition**, read in render, or the previous use's value survives into the next one.
 - **A form whose footer holds the commitment actions also holds the way out.** A Cancel that discards silently is the thing to avoid, not the Cancel itself: route it through the same confirmation as the breadcrumb and it cannot lose work. Asking a user to scroll back to a breadcrumb to leave is not a safeguard.
@@ -79,6 +88,21 @@ This went wrong three times in two days — *Document category*, *Reference docu
 ## Badges
 
 - One badge size across the product: 22 px tall with 12 px text. A filled status badge and an outline metadata badge appear in the same table row, and two heights on two baselines read as a mistake.
+- **Filled = status. Outline = metadata.** No status may take the outline treatment, because outline already means "this is a category, not a state". Superseded did, so `Superseded · Controlled` in one row read as two badges of the same kind.
+- **Every status has its own hue.** The document statuses:
+
+| Status | Treatment |
+|---|---|
+| Draft | `secondary` |
+| In Review | `warning` |
+| In Approval | `info` |
+| Approved | `success` |
+| **Superseded** | **violet — `--accura-status-superseded-surface` (#f3e8ff, Tailwind purple-100) on `--accura-status-superseded-text` (#6b21a8, purple-800), 7.39:1** |
+| Obsolete | `error` |
+
+- Superseded is violet rather than amber or red on purpose. It is a handover state, not a fault: the version stays in use until its successor takes effect, and a cautionary colour would tell the reader to stop using a document they are still meant to follow.
+- **The mapping lives in one place** — `apps/accura-prototype/components/document-status.ts` — and both the register and the details view read it. They each held their own copy until 2026-11-11, which is why Superseded was outline in both.
+- **A count badge on a section heading is noise on a read-only panel.** The items are listed directly underneath and can be counted by looking. Removed from Attachments, Reference Documents, the reference groups and the approval route on 2026-11-11.
 
 ## Permission and configuration matrices
 
@@ -103,9 +127,16 @@ This went wrong three times in two days — *Document category*, *Reference docu
 - Unselected options must not reserve an empty indicator gutter before their content. Every option label begins on the same leading alignment, whether it is selected or not.
 - Apply this behavior in the shared COSS `ComboboxItem` **and** `SelectItem` primitives so every consumer inherits it without screen-level overrides. A rule that names one primitive applies to its siblings; when a sibling is found missing it, fix the primitive and widen this line rather than patching the screen.
 
+## One content type, one shape
+
+- **The same content keeps the same rank on every screen.** Tags are a field of Document Information on the create form, in the Draft editor and in the details view — not a field on two screens and a section on the third. Before adding a card, check what the other screens that hold the same content do with it.
+- **The same content keeps the same treatment whether it is editable or not.** A linked reference is a plain row with the Brand 900 name in both the editor and the read-only panel; only the remove control appears or disappears. Wrapping the editable one in a bordered box made one document's references look like a different kind of object depending on its status.
+- **An empty-state line answers a question the reader of saved content is asking.** On a form, the input underneath already says the list is empty and what to do about it, so "None linked." is noise there. Show it read-only, hide it while editing.
+
 ## System feedback
 
-- Use a bottom-right toast for brief, non-blocking confirmation after a completed action such as saving Settings or sending an invitation.
+- Use a bottom-right toast for brief, non-blocking confirmation after a completed action such as saving Settings or sending an invitation. **Every module uses the same one** — Documents kept its own inline banner for save confirmations until 2026-11-11, so one kind of message appeared two ways depending on which module the user was in.
+- **The toast clears any sticky footer on the screen.** Its default bottom offset put the confirmation on top of the Submit button the user had just pressed. Raise the offset, not `--toast-inset`, which also drives the viewport width and the enter and exit animations.
 - Give each toast semantic text and an icon, include a dismiss control, and auto-dismiss it after a short interval. Color supports the message but never carries the meaning alone.
 - Keep inline alerts for persistent, contextual, blocking, or actionable information that must remain beside the affected content. Do not replace validation errors or required next steps with an ephemeral toast.
 - Use the Accura-level `AccuraInformationPanel` for persistent explanatory content that helps a user understand a nearby task but does not report validation, warning, or success. It uses the semantic information-blue surface, a uniform thin border, icon, title, and description so it remains distinct from selectable cards.

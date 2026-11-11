@@ -54,7 +54,7 @@ The two dates therefore do different work: approval ends the old version, and th
 
 - One primary file plus up to five attachments. Controlled primary files and revisions accept PDF, DOCX, or XLSX; External Documents require PDF. Primary files must not exceed 50 MB.
 - A valid primary file is required to save a Controlled Document as Draft and to submit it for review.
-- Creation forms and saved Drafts have **no Cancel action**; navigating away with unsaved changes prompts for confirmation.
+- `PRD-002` and `US-014` AC-01 give creation forms and saved Drafts **no Cancel action**. The prototype diverges, confirmed by the user on 2026-11-11: both carry Cancel, and it runs the same discard confirmation as Back to Documents, so it cannot lose unsaved work. Navigating away still prompts. See [`DECISIONS.md`](../../../change-log/DECISIONS.md).
 - On a saved Draft, Document ID, Document Type, Author, Version, and Status are read-only.
 - **Electronic signature is deferred** and is not required for the initial Document Module implementation, for either submission or external registration. An external PDF is registered with Acknowledge & Register, becomes Approved, and is effective from its registration date.
 

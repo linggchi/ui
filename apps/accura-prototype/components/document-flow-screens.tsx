@@ -42,6 +42,13 @@ import {
   InputGroupInput,
 } from "@coss/ui/components/input-group";
 import {
+  Menu,
+  MenuItem,
+  MenuPopup,
+  MenuSeparator,
+  MenuTrigger,
+} from "@coss/ui/components/menu";
+import {
   Select,
   SelectItem,
   SelectPopup,
@@ -61,6 +68,7 @@ import {
   Expand as ExpandIcon,
   Page as FileTextIcon,
   Lock as LockIcon,
+  MoreHoriz as MoreIcon,
   Attachment as PaperclipIcon,
   Printer as PrinterIcon,
   RefreshDouble as RefreshIcon,
@@ -80,6 +88,19 @@ import {
   SectionHeading,
 } from "@/components/accura-form";
 import { departments, people } from "@/components/document-directory";
+import {
+  type DocumentStatusName,
+  statusBadgeLook,
+} from "@/components/document-status";
+import {
+  canManage,
+  type ProtoRole,
+  roleIdentity,
+} from "@/components/prototype-role";
+import {
+  type ReferenceCandidate,
+  ReferencePicker,
+} from "@/components/reference-picker";
 
 export type DocumentFlowView =
   | "create"
@@ -120,7 +141,7 @@ export type DocumentReviewer = {
   // Records permission rather than by the assigned Reviewer themselves, so the
   // acting identity in AC-02 is never lost behind the assignment.
   by?: string;
-  decision: "Approved" | "Pending";
+  decision: "Approved" | "Awaiting";
   name: string;
 };
 
@@ -220,40 +241,6 @@ function periodicReview(document: DocumentSummary) {
 type DecisionAction = "approve" | "reject" | "submit" | null;
 
 /**
- * `US-012` AC-01 shows Approve and Reject only to a Reviewer assigned to the
- * document or a user with Read and Write All Records permission; everyone else
- * authorized to view it gets read-only details.
- *
- * Authentication is not built, so the prototype cannot know who is signed in.
- * The role below is **prototype chrome**, not a screen from the mockup: it
- * exists so the gate in AC-01 can be demonstrated from both sides. The real
- * screen reads the signed-in user's assignment and permission instead.
- */
-type ProtoRole =
-  | "all-records"
-  | "approver"
-  | "author"
-  | "read-only"
-  | "reviewer";
-
-const PROTO_ROLES: { label: string; value: ProtoRole }[] = [
-  { label: "Assigned Reviewer", value: "reviewer" },
-  { label: "Assigned Approver", value: "approver" },
-  { label: "Author", value: "author" },
-  { label: "Read and Write All Records", value: "all-records" },
-  { label: "Read Only", value: "read-only" },
-];
-
-/**
- * `US-014` AC-01, `US-015` AC-01 and `US-016` AC-01: editing a Draft, starting
- * a revision and marking a document Obsolete belong to the Author or to a user
- * with Read and Write All Records. `US-016`'s exact permission is still an open
- * question in PRD-002.
- */
-const canManage = (role: ProtoRole) =>
-  role === "all-records" || role === "author";
-
-/**
  * `US-012` AC-01 gates the Review stage on being an assigned Reviewer or
  * holding Read and Write All Records. `US-011` AC-05 gates the Approval stage
  * on the assigned Approver or the same permission.
@@ -266,25 +253,22 @@ function canDecide(role: ProtoRole, view: DocumentFlowView) {
 }
 
 /** The acting identity a recorded decision is attributed to (AC-02). */
-function actingUser(role: ProtoRole, document: DocumentSummary) {
-  if (role === "author") return document.author;
-  if (role === "approver") return document.approver ?? "Nina Patel";
-  if (role === "reviewer") {
-    return (
-      document.reviewers?.find((item) => item.decision === "Pending")?.name ??
-      document.reviewers?.[0]?.name ??
-      "Amit Kothari"
-    );
-  }
-  return "Priya Shah";
+/**
+ * Who is acting. The top bar names a person per role, so the decision is
+ * recorded under *that* person — not under whoever the document happens to
+ * have outstanding. If the shell says you are Sarah Johnson and the approval
+ * lands under someone else, the record is lying about who acted.
+ */
+function actingUser(role: ProtoRole) {
+  return roleIdentity(role).user;
 }
 
 /** The document's assigned Reviewers, or the two the mockup's route shows. */
 function reviewersOf(document: DocumentSummary): DocumentReviewer[] {
   return (
     document.reviewers?.map((item) => ({ ...item })) ?? [
-      { decision: "Pending", name: "Amit Kothari" },
-      { decision: "Pending", name: "Priya Shah" },
+      { decision: "Awaiting", name: "Amit Kothari" },
+      { decision: "Awaiting", name: "Priya Shah" },
     ]
   );
 }
@@ -300,11 +284,11 @@ function recordApproval(
   actor: string,
 ): DocumentReviewer[] {
   const own = reviewers.findIndex(
-    (item) => item.name === actor && item.decision === "Pending",
+    (item) => item.name === actor && item.decision === "Awaiting",
   );
   const index =
     own === -1
-      ? reviewers.findIndex((item) => item.decision === "Pending")
+      ? reviewers.findIndex((item) => item.decision === "Awaiting")
       : own;
   if (index === -1) return reviewers;
   return reviewers.map((item, position) =>
@@ -358,6 +342,8 @@ const initialsOf = (name: string) =>
     .join("");
 
 type DocumentFlowScreenProps = {
+  /** Every document that could be linked, for `US-014` AC-02's references. */
+  candidates: ReferenceCandidate[];
   document: DocumentSummary;
   /** `US-013` AC-02: approve, and set the Effective Date 10 days out. */
   onApprove: (effectiveDate: string) => void;
@@ -370,6 +356,8 @@ type DocumentFlowScreenProps = {
   /** `US-014` and `US-016`: write a change back to the saved record. */
   onPatch: (patch: Partial<DocumentSummary>) => void;
   onViewChange: (view: DocumentFlowView) => void;
+  /** Prototype chrome: the viewer the top bar is standing in for. */
+  role: ProtoRole;
   view: DocumentFlowView;
 };
 
@@ -418,15 +406,10 @@ function statusForView(view: DocumentFlowView) {
   return "Approved";
 }
 
-// The register's badge variants, so one status reads the same in the list and
-// in the details: filled for status, Superseded outline and Obsolete error.
-function statusVariant(view: DocumentFlowView) {
-  if (view === "approved") return "success" as const;
-  if (view === "review") return "warning" as const;
-  if (view === "qa") return "info" as const;
-  if (view === "superseded") return "outline" as const;
-  if (view === "obsolete") return "error" as const;
-  return "secondary" as const;
+// One status reads the same in the register and in the details, because both
+// read the same map. See `components/document-status.ts`.
+function statusLook(view: DocumentFlowView) {
+  return statusBadgeLook(statusForView(view) as DocumentStatusName);
 }
 
 /**
@@ -531,19 +514,14 @@ function WorkflowStepper({
  */
 function AssigneeGroup({
   children,
-  count,
   label,
 }: {
   children: React.ReactNode;
-  count?: string;
   label: string;
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-2">
-        <p className="font-semibold text-sm">{label}</p>
-        {count && <Badge variant="outline">{count}</Badge>}
-      </div>
+      <p className="font-semibold text-sm">{label}</p>
       {children}
     </div>
   );
@@ -557,7 +535,7 @@ function Assignee({
 }: {
   // US-012 AC-02: the review progress reflects the recorded decision, so each
   // assigned Reviewer carries their own state rather than a shared one.
-  decision?: "Approved" | "Pending";
+  decision?: "Approved" | "Awaiting";
   initials: string;
   label: string;
   roleLabel?: string;
@@ -678,39 +656,51 @@ function RejectDialog({
  * pressed without reading which one it is.
  */
 /**
- * Prototype chrome, not a mockup screen: authentication is not built, so the
- * eligibility gates in `US-012` AC-01, `US-013` AC-01, `US-014` AC-01,
- * `US-015` AC-01 and `US-016` AC-01 are demonstrated by choosing the viewer.
- * See `docs/rules/prototype-overrides.md`.
+ * Approving is confirmed before it is recorded.
+ *
+ * `US-012` AC-02 and `US-013` AC-02 say the decision is submitted **without an
+ * electronic-signature prompt**, and electronic signature is deferred from the
+ * initial implementation. A confirmation is not a signature: it asks nothing
+ * of the user beyond reading what they are about to do, captures no credential
+ * and adds no identity check. With the signature step gone there is otherwise
+ * nothing at all between a single click and a recorded, auditable decision —
+ * and in a QMS that decision is the point of the whole module.
+ *
+ * Added at the user's direction on 2026-11-11 and recorded as a divergence,
+ * because the ACs do not ask for it.
  */
-function RoleSwitcher({
-  onRoleChange,
-  role,
+function ApproveDialog({
+  consequence,
+  document,
+  onConfirm,
+  onOpenChange,
+  open,
+  user,
 }: {
-  onRoleChange: (role: ProtoRole) => void;
-  role: ProtoRole;
+  consequence: string;
+  document: DocumentSummary;
+  onConfirm: () => void;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+  user: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed bg-muted/40 px-4 py-3">
-      <Badge variant="outline">Prototype</Badge>
-      <span className="text-muted-foreground text-sm">Viewing as</span>
-      <Select
-        items={PROTO_ROLES}
-        onValueChange={(value) => onRoleChange(value as ProtoRole)}
-        value={role}
-      >
-        <SelectTrigger aria-label="Viewing as" className="w-64">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectPopup>
-          {PROTO_ROLES.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectPopup>
-      </Select>
-    </div>
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogPopup className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Record your approval?</DialogTitle>
+          <DialogDescription>
+            Your approval of {document.id} {document.version} is recorded
+            against <strong className="font-medium">{user}</strong> and appears
+            in the audit trail. {consequence}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose render={<Button variant="ghost" />}>Cancel</DialogClose>
+          <Button onClick={onConfirm}>Approve</Button>
+        </DialogFooter>
+      </DialogPopup>
+    </Dialog>
   );
 }
 
@@ -927,24 +917,22 @@ function AuditDrawer({
  */
 function EditorScreen({
   canEdit,
+  candidates,
   document,
   onBack,
   onPatch,
   onNotice,
-  onRoleChange,
   onSubmit,
   rejection,
-  role,
 }: {
   canEdit: boolean;
+  candidates: ReferenceCandidate[];
   document: DocumentSummary;
   onBack: () => void;
   onNotice: (message: string) => void;
   onPatch: (patch: Partial<DocumentSummary>) => void;
-  onRoleChange: (role: ProtoRole) => void;
   onSubmit: () => void;
   rejection?: DocumentRejection;
-  role: ProtoRole;
 }) {
   const [name, setName] = useState(document.name);
   const [department, setDepartment] = useState(document.department);
@@ -1019,7 +1007,7 @@ function EditorScreen({
     related,
     referred,
     reviewers: reviewers.map((person) => ({
-      decision: "Pending" as const,
+      decision: "Awaiting" as const,
       name: person,
     })),
     tags,
@@ -1096,8 +1084,6 @@ function EditorScreen({
           {dirty ? "Unsaved changes" : "All changes saved"}
         </div>
       </div>
-
-      <RoleSwitcher onRoleChange={onRoleChange} role={role} />
 
       <WorkflowStepper
         document={document}
@@ -1350,6 +1336,64 @@ function EditorScreen({
                   />
                 </Field>
               </div>
+              {/* Tags are a field of Document Information on the create form
+                  and in the details view, so they are one here too. A card of
+                  their own made the Draft the only screen where Tags were a
+                  section. */}
+              <Field>
+                <FormLabel optional>Tags</FormLabel>
+                {canEdit && (
+                  <InputGroup>
+                    <InputGroupInput
+                      onChange={(event) => setTagDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          addTag();
+                        }
+                      }}
+                      placeholder="Add a keyword and press Enter"
+                      type="text"
+                      value={tagDraft}
+                    />
+                    <InputGroupAddon align="inline-end">
+                      <Button
+                        disabled={tagDraft.trim().length === 0}
+                        onClick={addTag}
+                        size="sm"
+                        variant="ghost"
+                      >
+                        Add
+                      </Button>
+                    </InputGroupAddon>
+                  </InputGroup>
+                )}
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag) => (
+                      <Badge key={tag} variant="outline">
+                        {tag}
+                        {canEdit && (
+                          <button
+                            aria-label={`Remove ${tag}`}
+                            className="ms-1 cursor-pointer opacity-64 hover:opacity-100"
+                            onClick={() => {
+                              setTags(tags.filter((item) => item !== tag));
+                              setDirty(true);
+                            }}
+                            type="button"
+                          >
+                            <XIcon aria-hidden="true" className="size-3" />
+                          </button>
+                        )}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {!canEdit && tags.length === 0 && (
+                  <FieldDescription>No tags.</FieldDescription>
+                )}
+              </Field>
               <p className="flex items-center gap-2 text-muted-foreground text-xs">
                 <LockIcon aria-hidden="true" className="size-3.5" />
                 Document ID, type, author, version and status are fixed on a
@@ -1359,84 +1403,32 @@ function EditorScreen({
           </SectionCard>
 
           <SectionCard>
-            <SectionHeading title="Tags" />
-            <div className="flex flex-col gap-3 p-5">
-              {canEdit && (
-                <InputGroup>
-                  <InputGroupInput
-                    onChange={(event) => setTagDraft(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        addTag();
-                      }
-                    }}
-                    placeholder="Add a keyword and press Enter"
-                    type="text"
-                    value={tagDraft}
-                  />
-                  <InputGroupAddon align="inline-end">
-                    <Button
-                      disabled={tagDraft.trim().length === 0}
-                      onClick={addTag}
-                      size="sm"
-                      variant="ghost"
-                    >
-                      Add
-                    </Button>
-                  </InputGroupAddon>
-                </InputGroup>
-              )}
-              {tags.length === 0 ? (
-                <p className="text-muted-foreground text-xs">No tags.</p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <Badge key={tag} variant="outline">
-                      {tag}
-                      {canEdit && (
-                        <button
-                          aria-label={`Remove ${tag}`}
-                          className="ms-1 cursor-pointer opacity-64 hover:opacity-100"
-                          onClick={() => {
-                            setTags(tags.filter((item) => item !== tag));
-                            setDirty(true);
-                          }}
-                          type="button"
-                        >
-                          <XIcon aria-hidden="true" className="size-3" />
-                        </button>
-                      )}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-          </SectionCard>
-
-          <SectionCard>
             <SectionHeading
-              hint="Only documents in Draft, In Review or Approved status can be linked."
+              hint="A Superseded document can be cited — it stays in use until its successor takes effect. An Obsolete one cannot, and neither can a document still In Approval."
               title="Reference Documents"
             />
-            <div className="flex flex-col gap-4 p-5">
-              <ReferenceEditor
+            <div className="flex flex-col gap-5 p-5">
+              <ReferencePicker
                 canEdit={canEdit}
-                items={related}
-                label="Related documents"
+                candidates={candidates}
+                excludeId={document.id}
+                label="Related Documents"
                 onChange={(next) => {
                   setRelated(next);
                   setDirty(true);
                 }}
+                selected={related}
               />
-              <ReferenceEditor
+              <ReferencePicker
                 canEdit={canEdit}
-                items={referred}
-                label="Referred documents"
+                candidates={candidates}
+                excludeId={document.id}
+                label="Referred Documents"
                 onChange={(next) => {
                   setReferred(next);
                   setDirty(true);
                 }}
+                selected={referred}
               />
             </div>
           </SectionCard>
@@ -1596,58 +1588,6 @@ const departmentOptions = departments.map((value) => ({
   value,
 }));
 
-/**
- * `US-014` AC-02: Related and Referred documents can be added and removed on a
- * Draft. The create form's equivalent is still a non-functional search box —
- * see the open items in `docs/agent-worklog.md`.
- */
-function ReferenceEditor({
-  canEdit,
-  items,
-  label,
-  onChange,
-}: {
-  canEdit: boolean;
-  items: DocumentReference[];
-  label: string;
-  onChange: (items: DocumentReference[]) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <p className="text-muted-foreground text-xs">{label}</p>
-      {items.length === 0 ? (
-        <p className="text-muted-foreground text-xs">None linked.</p>
-      ) : (
-        items.map((item) => (
-          <div className="flex items-start gap-2" key={item.id}>
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-medium text-sm">{item.name}</p>
-              <p className="identifier truncate text-muted-foreground text-xs">
-                {item.id} · {item.version}
-              </p>
-            </div>
-            {canEdit && (
-              <Button
-                aria-label={`Remove ${item.name}`}
-                onClick={() =>
-                  onChange(items.filter((other) => other.id !== item.id))
-                }
-                size="icon-sm"
-                variant="ghost"
-              >
-                <XIcon aria-hidden="true" />
-              </Button>
-            )}
-          </div>
-        ))
-      )}
-      {canEdit && (
-        <Input placeholder="Search documents to link…" readOnly type="search" />
-      )}
-    </div>
-  );
-}
-
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 200;
 const ZOOM_STEP = 25;
@@ -1751,10 +1691,7 @@ function ReferenceList({
   if (!items || items.length === 0) return null;
   return (
     <div className="flex flex-col gap-2 px-5 py-4">
-      <div className="flex items-center justify-between gap-2">
-        <p className="font-semibold text-sm">{label}</p>
-        <Badge variant="outline">{items.length}</Badge>
-      </div>
+      <p className="font-semibold text-sm">{label}</p>
       <ul className="flex flex-col gap-1">
         {items.map((item) => (
           <li key={`${item.id}-${item.version}`}>
@@ -1787,7 +1724,6 @@ function DetailScreen({
   onObsolete,
   onOpenReference,
   onPrint,
-  onRoleChange,
   reviewers,
   role,
   view,
@@ -1801,7 +1737,6 @@ function DetailScreen({
   onObsolete: () => void;
   onOpenReference: (reference: DocumentReference) => void;
   onPrint: () => void;
-  onRoleChange: (role: ProtoRole) => void;
   reviewers: DocumentReviewer[];
   role: ProtoRole;
   view: Exclude<DocumentFlowView, "create" | "draft">;
@@ -1823,7 +1758,7 @@ function DetailScreen({
   // Obsolete belongs to its Author or a Read and Write All Records user.
   // US-016's exact permission is an open question in PRD-002.
   const mayManage = canManage(role);
-  const pending = reviewers.filter((item) => item.decision === "Pending");
+  const awaiting = reviewers.filter((item) => item.decision === "Awaiting");
   // The preview sits in a 360px-narrower column than the document it shows,
   // so it needs its own zoom and a way out of the column entirely.
   const [zoom, setZoom] = useState(100);
@@ -1846,7 +1781,12 @@ function DetailScreen({
             <h1 className="font-bold text-2xl leading-tight">
               {document.name}
             </h1>
-            <Badge variant={statusVariant(view)}>{statusForView(view)}</Badge>
+            <Badge
+              className={statusLook(view).className}
+              variant={statusLook(view).variant}
+            >
+              {statusForView(view)}
+            </Badge>
             {/* US-011 AC-01: Category identifies Controlled or External
                 separately from Document Type, so it is an outline metadata
                 badge beside the filled status one. */}
@@ -1856,64 +1796,68 @@ function DetailScreen({
             {document.id} · {document.version}
           </p>
         </div>
+        {/* Six outline buttons in a row gave every action the same weight
+            and wrapped onto two lines on a laptop. The audit trail is the one
+            a QMS reader reaches for on any document in any status, so it
+            stays named and visible; the rest — which come and go with status
+            and permission — collapse into one menu. */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* US-017 AC-01: Print only for Approved, Superseded or Obsolete. */}
-          <Button
-            disabled={!canPrint}
-            onClick={onPrint}
-            size="sm"
-            variant="outline"
-          >
-            <PrinterIcon aria-hidden="true" />
-            Print
-          </Button>
-          {/* US-018 AC-01 and AC-02: the native original always, and the
-              official controlled PDF only while the document is Approved. */}
-          <Button
-            onClick={() => onDownload("Original")}
-            size="sm"
-            variant="outline"
-          >
-            <DownloadIcon aria-hidden="true" />
-            Download original
-          </Button>
-          {isApproved && (
-            <Button
-              onClick={() => onDownload("Controlled PDF")}
-              size="sm"
-              variant="outline"
-            >
-              <DownloadIcon aria-hidden="true" />
-              Controlled PDF
-            </Button>
-          )}
-          {/* US-015 AC-01: Upload Revision only on an Approved Controlled
-              Document, and only for its Author or a Read and Write All
-              Records user. */}
-          {isApproved && mayManage && (
-            <Button onClick={onNewVersion} size="sm">
-              <RefreshIcon aria-hidden="true" />
-              {isExternal ? "Upload new version" : "Upload revision"}
-            </Button>
-          )}
           <Button onClick={onAudit} size="sm" variant="outline">
             <ShieldCheckIcon aria-hidden="true" />
             View audit trail
           </Button>
-          {/* US-016 AC-01: only while the document is Approved. */}
-          {isApproved && mayManage && (
-            <Button onClick={onObsolete} size="sm" variant="outline">
-              <ArchiveIcon aria-hidden="true" />
-              Mark as obsolete
-            </Button>
-          )}
+          <Menu>
+            <MenuTrigger
+              render={<Button size="sm" variant="outline" />}
+              aria-label="More actions"
+            >
+              <MoreIcon aria-hidden="true" />
+              More actions
+            </MenuTrigger>
+            <MenuPopup align="end">
+              {/* US-017 AC-01: Print only for Approved, Superseded or
+                  Obsolete. A status-gated action is disabled rather than
+                  hidden here, because the menu is also where a reader looks
+                  to find out that printing exists. */}
+              <MenuItem disabled={!canPrint} onClick={onPrint}>
+                <PrinterIcon aria-hidden="true" />
+                Print
+              </MenuItem>
+              {/* US-018 AC-01 and AC-02: the native original always, and the
+                  official controlled PDF only while Approved. */}
+              <MenuItem onClick={() => onDownload("Original")}>
+                <DownloadIcon aria-hidden="true" />
+                Download original
+              </MenuItem>
+              {isApproved && (
+                <MenuItem onClick={() => onDownload("Controlled PDF")}>
+                  <DownloadIcon aria-hidden="true" />
+                  Download controlled PDF
+                </MenuItem>
+              )}
+              {/* US-015 AC-01 and US-016 AC-01: only on an Approved document,
+                  and only for its Author or a Read and Write All Records
+                  user — so these are absent, not disabled. */}
+              {isApproved && mayManage && (
+                <>
+                  <MenuSeparator />
+                  <MenuItem onClick={onNewVersion}>
+                    <RefreshIcon aria-hidden="true" />
+                    {isExternal ? "Upload new version" : "Upload revision"}
+                  </MenuItem>
+                  <MenuItem onClick={onObsolete}>
+                    <ArchiveIcon aria-hidden="true" />
+                    Mark as obsolete
+                  </MenuItem>
+                </>
+              )}
+            </MenuPopup>
+          </Menu>
         </div>
       </div>
 
       {/* Prototype chrome, not a mockup screen: authentication is not built,
           so US-012 AC-01's gate is demonstrated by choosing the viewer. */}
-      {!isClosed && <RoleSwitcher onRoleChange={onRoleChange} role={role} />}
-
       {isOpenStage && (
         <div
           className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${
@@ -2076,12 +2020,7 @@ function DetailScreen({
               {/* The attachment's own name is the link, so the row has one
                   target instead of a name and a button that do the same
                   thing — and the list reads as content, not as a toolbar. */}
-              <SectionHeading
-                action={
-                  <Badge variant="outline">{document.attachments.length}</Badge>
-                }
-                title="Attachments"
-              />
+              <SectionHeading title="Attachments" />
               <ul className="flex flex-col divide-y">
                 {document.attachments.map((file) => (
                   <li key={file.fileName}>
@@ -2118,12 +2057,6 @@ function DetailScreen({
               (document.referred && document.referred.length > 0)) && (
               <SectionCard>
                 <SectionHeading
-                  action={
-                    <Badge variant="outline">
-                      {(document.related?.length ?? 0) +
-                        (document.referred?.length ?? 0)}
-                    </Badge>
-                  }
                   hint="Related documents support this one. Referred documents are cited by it."
                   title="Reference Documents"
                 />
@@ -2162,10 +2095,7 @@ function DetailScreen({
                   per-person role caption is then redundant and is dropped —
                   the group heading already says it. */}
               <div className="flex flex-col gap-5 p-5">
-                <AssigneeGroup
-                  count={`${reviewers.filter((item) => item.decision === "Approved").length}/${reviewers.length}`}
-                  label="Reviewers"
-                >
+                <AssigneeGroup label="Reviewers">
                   {reviewers.map((reviewer) => (
                     <Assignee
                       decision={reviewer.decision}
@@ -2177,16 +2107,16 @@ function DetailScreen({
                       }
                     />
                   ))}
-                  {view === "review" && pending.length > 0 && (
+                  {view === "review" && awaiting.length > 0 && (
                     <p className="text-muted-foreground text-xs">
-                      {pending.length} of {reviewers.length} still to approve
+                      {awaiting.length} of {reviewers.length} still to approve
                       before this document moves to In Approval.
                     </p>
                   )}
                 </AssigneeGroup>
                 <AssigneeGroup label="Approver">
                   <Assignee
-                    decision={isApproved || isClosed ? "Approved" : "Pending"}
+                    decision={isApproved || isClosed ? "Approved" : "Awaiting"}
                     initials={initialsOf(document.approver ?? "Nina Patel")}
                     label={document.approver ?? "Nina Patel"}
                   />
@@ -2204,8 +2134,8 @@ function DetailScreen({
         <footer className="sticky bottom-2 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-lg/8">
           <p className="text-muted-foreground text-sm">
             {view === "review"
-              ? pending.length > 0
-                ? `Awaiting review by ${pending.map((item) => item.name).join(", ")}.`
+              ? awaiting.length > 0
+                ? `Awaiting review by ${awaiting.map((item) => item.name).join(", ")}.`
                 : "All assigned Reviewers have approved."
               : `Awaiting approval by ${document.approver ?? "Nina Patel"}.`}
           </p>
@@ -2217,11 +2147,44 @@ function DetailScreen({
           </div>
         </footer>
       )}
-      {isApproved && (
-        <div className="flex items-center gap-3 rounded-xl border bg-background px-4 py-3 text-sm shadow-xs">
-          <CheckCircleIcon aria-hidden="true" className="size-5 text-primary" />
-          <span>This document is approved and effective.</span>
-        </div>
+      {/* The decision footer on In Review and In Approval is sticky, so the
+          status strip on a closed or approved document is too. One element in
+          one place, whatever the status — it was the only thing on the screen
+          whose position depended on which document you had opened. */}
+      {!mayDecide && (
+        <footer className="sticky bottom-2 z-10 flex flex-wrap items-center gap-3 rounded-xl border bg-background px-4 py-3 text-sm shadow-lg/8">
+          {isApproved ? (
+            <>
+              <CheckCircleIcon
+                aria-hidden="true"
+                className="size-5 text-primary"
+              />
+              <span>This document is approved and effective.</span>
+            </>
+          ) : isClosed ? (
+            <>
+              <ArchiveIcon
+                aria-hidden="true"
+                className="size-5 text-muted-foreground"
+              />
+              <span>
+                {view === "superseded"
+                  ? "This version has been superseded. It stays in use until its replacement takes effect."
+                  : "This document is obsolete and is no longer available for active use or linking."}
+              </span>
+            </>
+          ) : (
+            <>
+              <LockIcon
+                aria-hidden="true"
+                className="size-5 text-muted-foreground"
+              />
+              <span>
+                No decision is yours to record on this document right now.
+              </span>
+            </>
+          )}
+        </footer>
       )}
 
       {/* Reading the document is the main job of this screen, and the preview
@@ -2278,6 +2241,7 @@ function DetailScreen({
 }
 
 export function DocumentFlowScreen({
+  candidates,
   document,
   onApprove,
   onBack,
@@ -2286,12 +2250,13 @@ export function DocumentFlowScreen({
   onOpenReference,
   onPatch,
   onViewChange,
+  role,
   view,
 }: DocumentFlowScreenProps) {
   const [decision, setDecision] = useState<DecisionAction>(null);
   const [auditOpen, setAuditOpen] = useState(false);
-  const [role, setRole] = useState<ProtoRole>("reviewer");
   const [rejection, setRejection] = useState<DocumentRejection | undefined>();
+  const [approveOpen, setApproveOpen] = useState(false);
   const [obsoleteOpen, setObsoleteOpen] = useState(false);
   const [revisionOpen, setRevisionOpen] = useState(false);
 
@@ -2322,7 +2287,7 @@ export function DocumentFlowScreen({
     if (action === "approve" && view === "review") {
       // US-012 AC-02: the document stays In Review until every assigned
       // Reviewer has approved; only the final one advances it.
-      const next = recordApproval(reviewers, actingUser(role, document));
+      const next = recordApproval(reviewers, actingUser(role));
       setTally({ id: document.id, reviewers: next });
       if (next.every((item) => item.decision === "Approved")) {
         onViewChange("qa");
@@ -2348,7 +2313,7 @@ export function DocumentFlowScreen({
             : view === "review"
               ? "Reviewer"
               : "Approver",
-        user: actingUser(role, document),
+        user: actingUser(role),
       });
       onPatch({ status: "Draft" });
       onViewChange("draft");
@@ -2356,11 +2321,27 @@ export function DocumentFlowScreen({
     setDecision(null);
   };
 
-  // Submit and approve carry no signature step, so they take effect directly.
-  // Only a rejection opens a dialog, because PRD-002 still requires a reason.
+  // Submitting a Draft takes effect directly. A rejection opens a dialog
+  // because PRD-002 requires a reason, and an approval opens one because it
+  // is the decision the module exists to record — see ApproveDialog.
   const onDecision = (action: Exclude<DecisionAction, null>) => {
     if (action === "reject") setDecision("reject");
+    else if (action === "approve") setApproveOpen(true);
     else applyDecision(action);
+  };
+
+  /** What the reader is about to cause, in the dialog, before they cause it. */
+  const approvalConsequence = () => {
+    if (view === "qa") {
+      return `The document becomes Approved, and its Effective Date is set to ${effectiveDateFromApproval(new Date())}.`;
+    }
+    const remaining = reviewers.filter(
+      (item) => item.decision === "Awaiting" && item.name !== actingUser(role),
+    ).length;
+    if (remaining === 0) {
+      return "It is the last review outstanding, so the document moves to In Approval.";
+    }
+    return `${remaining} other ${remaining === 1 ? "Reviewer" : "Reviewers"} must still approve before the document moves to In Approval.`;
   };
 
   return (
@@ -2368,6 +2349,7 @@ export function DocumentFlowScreen({
       {view === "create" || view === "draft" ? (
         <EditorScreen
           canEdit={canManage(role)}
+          candidates={candidates}
           document={document}
           // Every field is seeded from the document, so a different row must
           // start a fresh editor rather than keep the last one's unsaved edits.
@@ -2375,10 +2357,8 @@ export function DocumentFlowScreen({
           onBack={onBack}
           onNotice={onNotice}
           onPatch={onPatch}
-          onRoleChange={setRole}
           onSubmit={() => onDecision("submit")}
           rejection={rejection}
-          role={role}
         />
       ) : (
         <DetailScreen
@@ -2396,12 +2376,22 @@ export function DocumentFlowScreen({
           onObsolete={() => setObsoleteOpen(true)}
           onOpenReference={onOpenReference}
           onPrint={() => window.print()}
-          onRoleChange={setRole}
           reviewers={reviewers}
           role={role}
           view={view}
         />
       )}
+      <ApproveDialog
+        consequence={approvalConsequence()}
+        document={document}
+        onConfirm={() => {
+          setApproveOpen(false);
+          applyDecision("approve");
+        }}
+        onOpenChange={setApproveOpen}
+        open={approveOpen}
+        user={actingUser(role)}
+      />
       <ObsoleteDialog
         document={document}
         onConfirm={() => {
@@ -2425,7 +2415,7 @@ export function DocumentFlowScreen({
             // US-015 AC-03: the route is carried over, but the new version has
             // not been reviewed — every decision starts Pending again.
             reviewers: reviewersOf(document).map((item) => ({
-              decision: "Pending" as const,
+              decision: "Awaiting" as const,
               name: item.name,
             })),
             status: "Draft",
