@@ -56,6 +56,6 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Prototype fixtures can live in JS bundles, so assets are protected too.
+  // Catalog fixtures can live in JS bundles, so assets are protected too.
   matcher: "/:path*",
 };
