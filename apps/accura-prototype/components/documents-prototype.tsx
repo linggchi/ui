@@ -726,8 +726,8 @@ function SidebarNavItem({
     <button
       aria-current={active ? "page" : undefined}
       aria-label={collapsed ? label : undefined}
-      className={`flex h-9 w-full items-center rounded-lg text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-sidebar-ring ${
-        collapsed ? "justify-center px-0" : "gap-3 px-2.5"
+      className={`flex h-8.5 w-full items-center rounded-lg text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-sidebar-ring ${
+        collapsed ? "justify-center px-0" : "gap-2.5 px-2.5"
       } ${
         active
           ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground shadow-xs"
@@ -753,7 +753,17 @@ function SidebarNavItem({
   return (
     <Tooltip>
       <TooltipTrigger render={button} />
-      <TooltipPopup side="right">{label}</TooltipPopup>
+      {/* The rail's own dark surface, not the page popover. Against a teal
+          sidebar a white card reads as a panel opening; a solid dark pill
+          reads as a label attached to the icon. No border for the same
+          reason. */}
+      <TooltipPopup
+        className="border-0 bg-[var(--accura-brand-950-darkshade)] px-1 py-0.5 font-medium text-[13px] text-white shadow-lg before:hidden"
+        side="right"
+        sideOffset={8}
+      >
+        {label}
+      </TooltipPopup>
     </Tooltip>
   );
 }
@@ -770,14 +780,19 @@ function AppSidebar({
   onToggle: () => void;
 }) {
   return (
-    // Shared delay: the first hover waits, moving between items afterwards is
-    // instant, so scanning a collapsed sidebar does not stutter.
-    <TooltipProvider delay={400}>
+    // No delay at all, set 2026-11-12 after trying 400, 100, 300, 350 and 50.
+    // A collapsed rail is icons only, so the tooltip is not a hint about a
+    // label already on screen — it is the only label there is, and any wait
+    // reads as the UI lagging behind the pointer. The usual argument for a
+    // delay is that a pointer crossing the rail should not set labels
+    // flashing; here that costs less than making someone wait to find out
+    // what an icon is. closeDelay 0 so it leaves with the pointer too.
+    <TooltipProvider closeDelay={0} delay={0}>
       <aside
         className={`sticky top-2 flex h-[calc(100svh-1rem)] shrink-0 flex-col overflow-hidden rounded-xl border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm transition-[width] duration-200 ${collapsed ? "w-16" : "w-[248px]"}`}
       >
         <div
-          className={`flex h-16 shrink-0 items-center ${collapsed ? "justify-center px-2" : "px-3"}`}
+          className={`flex h-14 shrink-0 items-center ${collapsed ? "justify-center px-2" : "px-3"}`}
         >
           {collapsed ? (
             <button
@@ -827,9 +842,13 @@ function AppSidebar({
           )}
         </div>
 
+        {/* gap-0.5 over the old gap-1, and 34px rows over 36px: nine items at
+            a 40px pitch read as nine separate things with the rail's whole
+            height between them. At 36px they read as one list, which is what
+            lets the divider and the Getting started card do the grouping. */}
         <nav
           aria-label="Primary navigation"
-          className="flex flex-col gap-1 p-2"
+          className="flex flex-col gap-0.5 px-2 py-1.5"
         >
           {navItems.map(({ icon, label, module }) => (
             <SidebarNavItem
@@ -857,7 +876,7 @@ function AppSidebar({
         {!collapsed && (
           <section
             aria-labelledby="getting-started-heading"
-            className="mx-2 mt-auto mb-2 overflow-hidden rounded-xl bg-[linear-gradient(140deg,var(--accura-pop)_0%,var(--accura-pop-soft)_100%)] p-4 text-[var(--accura-brand-950-darkshade)]"
+            className="mx-2 mt-auto mb-2 overflow-hidden rounded-xl border border-[var(--accura-brand-200)] bg-[linear-gradient(140deg,var(--accura-pop-mint)_0%,var(--accura-pop-mint-soft)_100%)] p-4 text-[var(--accura-brand-950-darkshade)]"
           >
             <p
               className="font-bold text-sm leading-tight"
@@ -882,7 +901,7 @@ function AppSidebar({
 
         <nav
           aria-label="Support navigation"
-          className={`flex flex-col gap-1 border-sidebar-border border-t p-2 ${collapsed ? "mt-auto" : ""}`}
+          className={`flex flex-col gap-0.5 border-sidebar-border border-t px-2 pt-2 pb-1.5 ${collapsed ? "mt-auto" : ""}`}
         >
           {secondaryNavItems.map(({ icon, label, module }) => (
             <SidebarNavItem

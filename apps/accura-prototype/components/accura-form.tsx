@@ -164,7 +164,7 @@ export function SectionHeading({
   title: string;
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 border-b bg-[var(--accura-zinc-50)] px-5 py-4">
+    <div className="flex flex-wrap items-start justify-between gap-3 border-b bg-[var(--accura-zinc-50)] px-5 py-4.5">
       {/* min-w-0 + flex-1: without it a long description takes the full row
           and wraps the action onto a second line, left-aligned under the
           text. The action stays on the right and never shrinks. */}

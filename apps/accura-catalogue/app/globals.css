@@ -9,6 +9,13 @@
   --accura-canvas: var(--accura-zinc-100);
   --accura-pop: #d9f25f;
   --accura-pop-soft: #f1f8cf;
+  /* Figma, 2026-11-12: the Getting started card and the dashboard banner are
+     a mint pair, not the lime --accura-pop had been. Revised the same day
+     from #caedce / #f1f8cf, which still carried a yellow cast at the light
+     end; these two are mint the whole way. --accura-pop stays the lime it
+     has always been. */
+  --accura-pop-mint: #d9f2e8;
+  --accura-pop-mint-soft: #ecf9f2;
   --accura-coral: #ff7a66;
   --primary: var(--accura-brand-950-darkshade);
   --ring: var(--accura-brand-950-darkshade);

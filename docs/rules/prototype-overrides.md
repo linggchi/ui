@@ -30,6 +30,17 @@ replaces*; the reasoning belongs to the rule it links to.
 
 ## Notes
 
+- **`AccuraTabs` spacing has to be written as the COSS data variant.** The
+  COSS underline tabs set their own padding with
+  `data-[orientation=horizontal]:py-1`. A plain `py-3` or `pt-3` in the Accura
+  wrapper loses to it on specificity, so the row stays at 4px and the edit
+  reads as a build problem rather than a losing selector — the exact shape of
+  the Tailwind HMR trap noted below, and worth checking before clearing the
+  cache. Write `data-[orientation=horizontal]:pt-3` instead. Horizontal
+  padding has no such variant, so `px-2` applies normally; it is `px-2` and not
+  `px-5` because a tab carries its own `px-3`, and the two together put the
+  label on the same 20px gutter as the heading band and the table.
+
 - The Accura form conventions — `FormLabel`, `RECESSED_INPUT`, `SectionCard`
   and `SectionHeading` — live in
   `apps/accura-prototype/components/accura-form.tsx`. Import them; do not
@@ -63,3 +74,5 @@ replaces*; the reasoning belongs to the rule it links to.
   the shared primitive in `packages/ui`, so it is available to every
   application and must be kept in sync through `bun run ui:sync` from
   `apps/ui`, never edited directly in `packages/ui`.
+
+- **A replaced image asset gets a new filename.** Overwriting a file under `public/` keeps its URL, and the old bytes then survive a dev-server restart, a `.next/cache` clear and a hard reload — the page goes on showing art that is no longer on disk, which reads as "the change did nothing". Next 16 closes the obvious escape too: `src="/x.png?v=2"` fails with `images.localPatterns`. Rename instead (`dashboard-banner-mint.png`, 2026-11-12); the name also records what changed.

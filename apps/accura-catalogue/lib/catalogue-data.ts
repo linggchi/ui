@@ -276,7 +276,7 @@ export const entries: CatalogueEntry[] = [
     id: "list-screen",
     rules: [
       "One card holds the heading band, the tabs, the filter row and the table — not a heading loose on the canvas above a separate table card.",
-      "A tabbed card's heading band holds the section name and nothing else - an action scoped to one tab would be absent on the other, leaving the heading row lurching between two layouts.",
+      "A card's heading band holds the section name and nothing else - in Settings that is every card, stubs included. For a tabbed card it cannot hold an action either: one scoped to a single tab would be absent on the other, leaving the heading row lurching between two layouts.",
       "Table + action with no filter row: a band under the tab line, description left, action right, vertically centred (SectionToolbar).",
       "Filter row + table + action: the action joins the filter row, pushed right, and no description is written.",
       "No action: add nothing. A band holding only a sentence is a divider the panel did not need.",

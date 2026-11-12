@@ -20,7 +20,18 @@ export function TabsList({
   return (
     <CossTabsList
       className={cn(
-        "w-full justify-start border-b px-4 py-2 [&_[data-slot=tab-indicator]]:bg-[var(--accura-brand-950-darkshade)]",
+        // px-2 so a tab's own px-3 lands its label on the 20px gutter the
+        // heading band and the table's first column already use.
+        //
+        // Top padding only: the gap belongs between the heading band and the
+        // tabs. Below them the underline has to stay close to the row's
+        // bottom edge, so the base 4px is left alone.
+        //
+        // It has to be written as the same data variant the COSS underline
+        // tabs use. A plain `pt-3` loses to their
+        // `data-[orientation=horizontal]:py-1` on specificity, so the row
+        // stays 4px and the change looks like it did nothing.
+        "w-full justify-start border-b px-2 data-[orientation=horizontal]:pt-3 [&_[data-slot=tab-indicator]]:bg-[var(--accura-brand-950-darkshade)]",
         className,
       )}
       variant="underline"

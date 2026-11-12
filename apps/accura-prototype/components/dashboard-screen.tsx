@@ -216,7 +216,16 @@ export function DashboardScreen({ onOpenDocuments }: DashboardScreenProps) {
 
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-5">
-      <section className="relative flex h-[147px] items-center overflow-hidden rounded-2xl px-6 sm:px-10">
+      {/* The artwork is the Figma export (mint -> cream, 2026-11-12), replacing
+          the lime wash that preceded it. The gradient stays underneath it as
+          the paint-in colour: the PNG is 860KB and the band is full-bleed, so
+          without it the section flashes white on a cold load.
+          The file is `-mint` rather than overwriting `dashboard-banner.png`
+          on purpose. Overwriting it served the old lime art from cache
+          through a dev-server restart and a hard reload, and Next 16 rejects
+          a `?v=` cache-bust outright (`images.localPatterns`). A replaced
+          image asset gets a new filename. */}
+      <section className="relative flex h-[147px] items-center overflow-hidden rounded-2xl bg-[linear-gradient(90deg,var(--accura-pop-mint)_0%,var(--accura-pop-mint-soft)_100%)] px-6 sm:px-10">
         <Image
           alt=""
           aria-hidden="true"
@@ -224,11 +233,11 @@ export function DashboardScreen({ onOpenDocuments }: DashboardScreenProps) {
           fill
           priority
           sizes="(max-width: 1600px) 100vw, 1600px"
-          src="/brand/dashboard-banner.png"
+          src="/brand/dashboard-banner-mint-v2.png"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 rounded-2xl border border-[#D2F042]"
+          className="pointer-events-none absolute inset-0 rounded-2xl border border-[var(--accura-brand-200)]"
         />
 
         <div className="relative z-1 flex flex-col gap-1">

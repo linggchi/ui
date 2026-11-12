@@ -1719,10 +1719,10 @@ export function SettingsScreen({
             section !== "documents" &&
             section !== "organization" && (
               <SectionCard>
-                <SectionHeading
-                  description={sectionIntro[section]}
-                  title={activeItem.label}
-                />
+                {/* Title only, like every other card in Settings. The intro
+                    sentence is not lost: NotSpecified prints it directly
+                    below, so the heading band was repeating it verbatim. */}
+                <SectionHeading title={activeItem.label} />
                 <NotSpecified section={activeItem} />
               </SectionCard>
             )}
