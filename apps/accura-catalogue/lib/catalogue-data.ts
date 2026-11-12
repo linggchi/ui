@@ -264,14 +264,23 @@ export const entries: CatalogueEntry[] = [
     title: "Action Priority (Buttons)",
   },
   {
-    appliedIn: ["Settings > Users.", "The Dashboard's Records section."],
+    appliedIn: [
+      "Settings > Users.",
+      "Settings > Organization.",
+      "Settings > Documents.",
+      "The Dashboard's Records section.",
+    ],
     consistency:
-      "Settled by Settings > Users; the Dashboard's Records section was brought onto it on 2026-11-11, having been built before the pattern existed.",
+      "Settled by Settings > Users; the Dashboard's Records section was brought onto it on 2026-11-11, having been built before the pattern existed. Where the action sits was reworked across Settings on 2026-11-12; the Dashboard has not been revisited since, so it is the one tabbed card still carrying a description in its heading band.",
     group: "patterns",
     id: "list-screen",
     rules: [
       "One card holds the heading band, the tabs, the filter row and the table — not a heading loose on the canvas above a separate table card.",
-      "The heading line holds the section's primary action. A filter belongs in the filter row, not in the slot reserved for Add.",
+      "A tabbed card's heading band holds the section name and nothing else - an action scoped to one tab would be absent on the other, leaving the heading row lurching between two layouts.",
+      "Table + action with no filter row: a band under the tab line, description left, action right, vertically centred (SectionToolbar).",
+      "Filter row + table + action: the action joins the filter row, pushed right, and no description is written.",
+      "No action: add nothing. A band holding only a sentence is a divider the panel did not need.",
+      "A filter belongs in the filter row, never in the heading band.",
       "The filter row carries the count of what is currently shown.",
       "The table sits behind a border-t, with the Zinc 50 header row.",
       "The row action is a “…” menu, never a bare icon button — so a second action can be added without redesigning the column.",
@@ -282,6 +291,11 @@ export const entries: CatalogueEntry[] = [
     ],
     sources: [
       { label: "Rule", where: "docs/rules/ui-hierarchy.md §List screens" },
+      {
+        label: "Reference",
+        where:
+          "Atlassian §Tabs/Hierarchy, Primer PageHeader, GitHub Issues - scanned 2026-11-12",
+      },
       { label: "QA", where: "design-qa.md · Iteration 51" },
       {
         label: "Prototype",
@@ -289,7 +303,7 @@ export const entries: CatalogueEntry[] = [
           "components/settings-screens.tsx, components/dashboard-screen.tsx",
       },
     ],
-    status: "ready",
+    status: "draft",
     summary:
       "One card per list section: heading, tabs, filter row with a count, table, “…” row menu.",
     title: "List Screen",

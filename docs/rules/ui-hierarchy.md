@@ -92,7 +92,13 @@ This went wrong three times in two days — *Document category*, *Reference docu
 One shape for every screen that lists records, set by Settings > Users and now followed by the Dashboard's Records section:
 
 - **One card holds the whole section** — heading band, tabs, filter row, table. A heading and tabs loose on the canvas above a separate table card read as three unrelated things.
-- **The heading line holds the section's primary action** (Add User). A filter does not belong there; it goes in the filter row with the result count, where the search sits.
+- **The action goes where the controls are, not in the heading band.** Settled 2026-11-12, replacing the earlier rule that the heading line holds the primary action. Three cases, and they decide it:
+  1. **Table + action, no filter row** — a band under the tab line holding the description on the left and the action on the right, the two vertically centred (`SectionToolbar` in `components/accura-form.tsx`). Settings > Organization > Departments.
+  2. **Filter row + table + action** — the action joins the filter row, pushed right with `ms-auto`, and **no description is written**. A band carrying nothing but a sentence is a divider the panel did not need. Settings > Users > Users, Settings > Documents.
+  3. **No action** — nothing is added. Do not open a band for a description alone. Settings > Users > Roles & Permissions, Settings > Organization > Record Numbering.
+- **A tabbed card's heading band holds the section name and nothing else.** An action scoped to one tab cannot sit up there: it is absent on the other tab, so the heading row lurches between two layouts, and where it does appear it reads as applying to the whole section. Atlassian states it from the other side — what applies to every tab goes above the tab line, what does not, goes below it. GitHub splits it the same way: the repository tab bar sits in the page header, and New issue sits inside the Issues panel.
+- **A filter does not belong in the heading band either.** It goes in the filter row with the result count, where the search sits.
+- **`SectionHeading`'s text block is `min-w-0 flex-1` and its action `shrink-0`.** Without it a long description takes the whole row and wraps the action onto a second line, left-aligned under the text — which is what a two-line Document Types description did before 2026-11-12.
 - **The filter row carries the count** of what is currently shown.
 - **The table sits behind a `border-t`**, with the Zinc 50 header row.
 - **The row action is a “…” menu**, never a bare icon button. One place for row actions means a second action can be added later without redesigning the column.

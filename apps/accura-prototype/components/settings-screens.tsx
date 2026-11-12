@@ -88,6 +88,7 @@ import {
   RECESSED_INPUT,
   SectionCard,
   SectionHeading,
+  SectionToolbar,
 } from "@/components/accura-form";
 import {
   DEFAULT_REVIEW_YEARS,
@@ -176,9 +177,9 @@ const sectionIntro: Record<SettingsSection, string> = {
   "change-control":
     "Change categories, impact assessment, and approval routing.",
   deviations: "Deviation categories, severity levels, and escalation rules.",
-  documents:
-    "Document types, numbering, and review defaults used across the QMS.",
-  organization: "Organisation profile, departments, sites, and locale.",
+  documents: "Document types, numbering, and review defaults.",
+  organization:
+    "Record numbering and the departments records can be assigned to.",
   training: "Curricula, assignment rules, and training record retention.",
   users: "Who can sign in to Accura and what each built-in role allows.",
 };
@@ -767,6 +768,9 @@ export function SettingsScreen({
 }) {
   const [section, setSection] = useState<SettingsSection>("users");
   const [usersTab, setUsersTab] = useState<"roles" | "users">("users");
+  const [organizationTab, setOrganizationTab] = useState<
+    "departments" | "numbering"
+  >("numbering");
   const [users, setUsers] = useState<EditableUser[]>(initialUsers);
   const [userQuery, setUserQuery] = useState("");
   const [roleQuery, setRoleQuery] = useState("");
@@ -1119,18 +1123,7 @@ export function SettingsScreen({
         <div className="flex min-w-0 flex-col gap-4">
           {section === "users" && (
             <SectionCard>
-              <SectionHeading
-                action={
-                  usersTab === "users" ? (
-                    <Button onClick={openInvite}>
-                      <PlusIcon aria-hidden="true" />
-                      Add user
-                    </Button>
-                  ) : undefined
-                }
-                description={sectionIntro.users}
-                title="Users"
-              />
+              <SectionHeading title="Users" />
 
               <Tabs
                 onValueChange={(value) =>
@@ -1144,6 +1137,9 @@ export function SettingsScreen({
                 </TabsList>
 
                 <TabsPanel value="users">
+                  {/* The panel has a filter row, so the action joins it and
+                      no description band is added. A panel without filters
+                      puts the action beside its description instead. */}
                   <div className="flex flex-wrap items-center gap-3 px-5 py-4">
                     <InputGroup className="max-w-sm">
                       <InputGroupAddon>
@@ -1160,6 +1156,10 @@ export function SettingsScreen({
                     <span className="text-muted-foreground text-sm">
                       {countLabel(visibleUsers.length, "user")}
                     </span>
+                    <Button className="ms-auto" onClick={openInvite}>
+                      <PlusIcon aria-hidden="true" />
+                      Add user
+                    </Button>
                   </div>
 
                   <div className="border-t">
@@ -1383,16 +1383,7 @@ export function SettingsScreen({
 
           {section === "documents" && (
             <SectionCard>
-              <SectionHeading
-                description="Document types, numbering, and review defaults. The abbreviation drives Document ID generation, for example SOP-001."
-                action={
-                  <Button onClick={() => openTypeForm()}>
-                    <PlusIcon aria-hidden="true" />
-                    Add type
-                  </Button>
-                }
-                title="Document Types"
-              />
+              <SectionHeading title="Document Types" />
 
               <div className="flex flex-col">
                 <div className="flex flex-wrap items-center gap-3 px-5 py-4">
@@ -1411,6 +1402,10 @@ export function SettingsScreen({
                   <span className="text-muted-foreground text-sm">
                     {countLabel(visibleTypes.length, "document type")}
                   </span>
+                  <Button className="ms-auto" onClick={() => openTypeForm()}>
+                    <PlusIcon aria-hidden="true" />
+                    Add type
+                  </Button>
                 </div>
 
                 <div className="border-t">
@@ -1508,198 +1503,216 @@ export function SettingsScreen({
           {/* US-008 and US-009 both live at Settings > Organisation. Until
               2026-11-11 this section said "No PRD or user story covers this
               section" — true when it was written, and false from the moment
-              the 2026-11-10 sync added the two stories. */}
+              the 2026-11-10 sync added the two stories. The two concerns are
+              segmented the same way Users segments Users / Roles, rather than
+              stacked as two cards: one surface, one heading, one tab strip. */}
           {section === "organization" && (
-            <>
-              <SectionCard>
-                <SectionHeading
-                  description="The Document ID format for this organisation. The Document Type segment comes from Settings > Documents."
-                  title="Record Numbering"
-                />
-                <div className="flex flex-col gap-4 p-5">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field>
-                      <FormLabel>Organisation prefix</FormLabel>
-                      <Input
-                        aria-invalid={numberingError !== null}
-                        maxLength={10}
-                        onChange={(event) => {
-                          setNumberingDraft({
-                            ...numberingDraft,
-                            prefix: event.target.value.toUpperCase(),
-                          });
-                          setNumberingError(null);
-                        }}
-                        placeholder="ACME"
-                        type="text"
-                        value={numberingDraft.prefix}
-                      />
-                      {numberingError && (
-                        <FieldDescription className="text-destructive">
-                          {numberingError}
-                        </FieldDescription>
-                      )}
-                    </Field>
-                    <Field>
-                      <FormLabel>Separator</FormLabel>
-                      <Select
-                        items={separatorOptions}
-                        onValueChange={(value) =>
-                          setNumberingDraft({
-                            ...numberingDraft,
-                            separator: String(
-                              value,
-                            ) as NumberingSetting["separator"],
-                          })
-                        }
-                        value={numberingDraft.separator}
-                      >
-                        <SelectTrigger aria-label="Separator">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectPopup>
-                          {separatorOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectPopup>
-                      </Select>
-                    </Field>
-                    <Field>
-                      <FormLabel>Sequence length</FormLabel>
-                      <Select
-                        items={sequenceOptions}
-                        onValueChange={(value) =>
-                          setNumberingDraft({
-                            ...numberingDraft,
-                            sequenceLength: Number(value),
-                          })
-                        }
-                        value={String(numberingDraft.sequenceLength)}
-                      >
-                        <SelectTrigger aria-label="Sequence length">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectPopup>
-                          {sequenceOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectPopup>
-                      </Select>
-                    </Field>
-                    <Field>
-                      <FormLabel optional>Include year</FormLabel>
-                      <div className="flex h-8.5 items-center gap-2">
-                        <Switch
-                          checked={numberingDraft.includeYear}
-                          id="include-year"
-                          onCheckedChange={(checked) =>
+            <SectionCard>
+              <SectionHeading title="Organization" />
+
+              <Tabs
+                onValueChange={(value) =>
+                  setOrganizationTab(value as "departments" | "numbering")
+                }
+                value={organizationTab}
+              >
+                <TabsList aria-label="Organisation settings">
+                  <TabsTab value="numbering">Record Numbering</TabsTab>
+                  <TabsTab value="departments">Departments</TabsTab>
+                </TabsList>
+
+                <TabsPanel value="numbering">
+                  <div className="flex flex-col gap-4 p-5">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field>
+                        <FormLabel>Organisation prefix</FormLabel>
+                        <Input
+                          aria-invalid={numberingError !== null}
+                          maxLength={10}
+                          onChange={(event) => {
                             setNumberingDraft({
                               ...numberingDraft,
-                              includeYear: checked,
+                              prefix: event.target.value.toUpperCase(),
+                            });
+                            setNumberingError(null);
+                          }}
+                          placeholder="ACME"
+                          type="text"
+                          value={numberingDraft.prefix}
+                        />
+                        {numberingError && (
+                          <FieldDescription className="text-destructive">
+                            {numberingError}
+                          </FieldDescription>
+                        )}
+                      </Field>
+                      <Field>
+                        <FormLabel>Separator</FormLabel>
+                        <Select
+                          items={separatorOptions}
+                          onValueChange={(value) =>
+                            setNumberingDraft({
+                              ...numberingDraft,
+                              separator: String(
+                                value,
+                              ) as NumberingSetting["separator"],
                             })
                           }
-                        />
-                        <label className="text-sm" htmlFor="include-year">
-                          Add the current year to every ID
-                        </label>
-                      </div>
-                    </Field>
-                  </div>
-
-                  {/* US-008 AC-02: the preview is generated the same way a
-                      real ID is, so it cannot drift from what modules make. */}
-                  <div className="rounded-xl border bg-[var(--accura-zinc-50)] p-4">
-                    <p className="text-muted-foreground text-xs">
-                      Document ID preview
-                    </p>
-                    <p className="identifier mt-1 font-medium text-lg">
-                      {formatDocumentId(numberingDraft, "BR", 1)}
-                    </p>
-                    <p className="mt-2 text-muted-foreground text-xs">
-                      Prefix · Document Type abbreviation
-                      {numberingDraft.includeYear ? " · year" : ""} · sequence,
-                      zero-padded to {numberingDraft.sequenceLength} digits.
-                    </p>
-                  </div>
-                </div>
-                {/* Disabled until something in this section changes, so the
-                    control states whether there is anything to save. */}
-                <div className="flex justify-end border-t px-5 py-4">
-                  <Button disabled={!numberingDirty} onClick={saveNumbering}>
-                    Save
-                  </Button>
-                </div>
-              </SectionCard>
-
-              <SectionCard>
-                <SectionHeading
-                  action={
-                    <Button onClick={() => openDepartmentForm()}>
-                      <PlusIcon aria-hidden="true" />
-                      Add department
-                    </Button>
-                  }
-                  description="Departments a document, user or record can be assigned to."
-                  title="Departments"
-                />
-                <Table>
-                  <TableHeader className="bg-secondary/72">
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-[32%] ps-5 text-xs">
-                        Name
-                      </TableHead>
-                      <TableHead className="text-xs">Description</TableHead>
-                      <TableHead className="w-12 pe-5 text-right text-xs">
-                        <span className="sr-only">Actions</span>
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {departments.map((department) => (
-                      <TableRow
-                        className="hover:bg-secondary/48"
-                        key={department.name}
-                      >
-                        <TableCell className="ps-5 font-medium">
-                          {department.name}
-                        </TableCell>
-                        {/* US-009 AC-01: a blank description is an em dash. */}
-                        <TableCell className="whitespace-normal text-muted-foreground text-sm leading-snug">
-                          {department.description || "—"}
-                        </TableCell>
-                        <TableCell className="pe-5 text-right">
-                          <Menu>
-                            <MenuTrigger
-                              render={
-                                <Button
-                                  aria-label={`More actions for ${department.name}`}
-                                  size="icon-sm"
-                                  variant="ghost"
-                                />
-                              }
-                            >
-                              <MoreHorizontalIcon aria-hidden="true" />
-                            </MenuTrigger>
-                            <MenuPopup align="end">
-                              <MenuItem
-                                onClick={() => openDepartmentForm(department)}
+                          value={numberingDraft.separator}
+                        >
+                          <SelectTrigger aria-label="Separator">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectPopup>
+                            {separatorOptions.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
                               >
-                                <PencilIcon aria-hidden="true" />
-                                Edit department
-                              </MenuItem>
-                            </MenuPopup>
-                          </Menu>
-                        </TableCell>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectPopup>
+                        </Select>
+                      </Field>
+                      <Field>
+                        <FormLabel>Sequence length</FormLabel>
+                        <Select
+                          items={sequenceOptions}
+                          onValueChange={(value) =>
+                            setNumberingDraft({
+                              ...numberingDraft,
+                              sequenceLength: Number(value),
+                            })
+                          }
+                          value={String(numberingDraft.sequenceLength)}
+                        >
+                          <SelectTrigger aria-label="Sequence length">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectPopup>
+                            {sequenceOptions.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectPopup>
+                        </Select>
+                      </Field>
+                      <Field>
+                        <FormLabel optional>Include year</FormLabel>
+                        <div className="flex h-8.5 items-center gap-2">
+                          <Switch
+                            checked={numberingDraft.includeYear}
+                            id="include-year"
+                            onCheckedChange={(checked) =>
+                              setNumberingDraft({
+                                ...numberingDraft,
+                                includeYear: checked,
+                              })
+                            }
+                          />
+                          <label className="text-sm" htmlFor="include-year">
+                            Add the current year to every ID
+                          </label>
+                        </div>
+                      </Field>
+                    </div>
+
+                    {/* US-008 AC-02: the preview is generated the same way a
+                        real ID is, so it cannot drift from what modules make. */}
+                    <div className="rounded-xl border bg-[var(--accura-zinc-50)] p-4">
+                      <p className="text-muted-foreground text-xs">
+                        Document ID preview
+                      </p>
+                      <p className="identifier mt-1 font-medium text-lg">
+                        {formatDocumentId(numberingDraft, "BR", 1)}
+                      </p>
+                      <p className="mt-2 text-muted-foreground text-xs">
+                        Prefix · Document Type abbreviation
+                        {numberingDraft.includeYear ? " · year" : ""} ·
+                        sequence, zero-padded to {numberingDraft.sequenceLength}{" "}
+                        digits.
+                      </p>
+                    </div>
+                  </div>
+                  {/* Disabled until something in this section changes, so the
+                      control states whether there is anything to save. */}
+                  <div className="flex justify-end border-t px-5 py-4">
+                    <Button disabled={!numberingDirty} onClick={saveNumbering}>
+                      Save
+                    </Button>
+                  </div>
+                </TabsPanel>
+
+                <TabsPanel value="departments">
+                  <SectionToolbar
+                    action={
+                      <Button onClick={() => openDepartmentForm()}>
+                        <PlusIcon aria-hidden="true" />
+                        Add department
+                      </Button>
+                    }
+                    description="Departments a document, user or record can be assigned to."
+                  />
+                  <Table>
+                    <TableHeader className="bg-secondary/72">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="w-[32%] ps-5 text-xs">
+                          Name
+                        </TableHead>
+                        <TableHead className="text-xs">Description</TableHead>
+                        <TableHead className="w-12 pe-5 text-right text-xs">
+                          <span className="sr-only">Actions</span>
+                        </TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </SectionCard>
-            </>
+                    </TableHeader>
+                    <TableBody>
+                      {departments.map((department) => (
+                        <TableRow
+                          className="hover:bg-secondary/48"
+                          key={department.name}
+                        >
+                          <TableCell className="ps-5 font-medium">
+                            {department.name}
+                          </TableCell>
+                          {/* US-009 AC-01: a blank description is an em dash. */}
+                          <TableCell className="whitespace-normal text-muted-foreground text-sm leading-snug">
+                            {department.description || "—"}
+                          </TableCell>
+                          <TableCell className="pe-5 text-right">
+                            <Menu>
+                              <MenuTrigger
+                                render={
+                                  <Button
+                                    aria-label={`More actions for ${department.name}`}
+                                    size="icon-sm"
+                                    variant="ghost"
+                                  />
+                                }
+                              >
+                                <MoreHorizontalIcon aria-hidden="true" />
+                              </MenuTrigger>
+                              <MenuPopup align="end">
+                                <MenuItem
+                                  onClick={() => openDepartmentForm(department)}
+                                >
+                                  <PencilIcon aria-hidden="true" />
+                                  Edit department
+                                </MenuItem>
+                              </MenuPopup>
+                            </Menu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TabsPanel>
+              </Tabs>
+            </SectionCard>
           )}
 
           {section !== "users" &&

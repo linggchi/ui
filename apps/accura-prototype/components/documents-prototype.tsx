@@ -690,7 +690,7 @@ function toRecord(created: CreatedDocument): DocumentRecord {
 }
 
 const typeOptions = [
-  { label: "All types", value: "all" },
+  { label: "All document types", value: "all" },
   ...configuredDocumentTypes.map((value) => ({ label: value, value })),
 ];
 

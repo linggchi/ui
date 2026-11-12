@@ -118,6 +118,38 @@ export function Hint({
  * something the user cannot infer from the label and the control — never to
  * repeat them (docs/rules/ui-hierarchy.md — Form fields).
  */
+/**
+ * The band directly under a card's tab line, for a panel that owns an action
+ * but has no filter row to put it on: what this tab is, on the left, and the
+ * action, on the right, the two centred against each other.
+ *
+ * A tabbed card's heading holds the section name only. An action scoped to one
+ * tab cannot sit up there — it would be absent on the other tab, which leaves
+ * the heading row lurching between two layouts, and it would read as applying
+ * to the whole section. Atlassian states the rule the other way round: what
+ * applies to every tab goes above the tab line, what does not, goes below it.
+ *
+ * Where the panel already has a filter row, the action joins that row instead
+ * and no description is written: a band carrying nothing but a sentence is a
+ * divider the panel did not need.
+ */
+export function SectionToolbar({
+  action,
+  description,
+}: {
+  action?: React.ReactNode;
+  description?: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
+      <p className="min-w-0 flex-1 text-muted-foreground text-sm">
+        {description}
+      </p>
+      {action && <div className="shrink-0">{action}</div>}
+    </div>
+  );
+}
+
 export function SectionHeading({
   action,
   description,
@@ -133,7 +165,10 @@ export function SectionHeading({
 }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3 border-b bg-[var(--accura-zinc-50)] px-5 py-4">
-      <div className="flex flex-col gap-0.5">
+      {/* min-w-0 + flex-1: without it a long description takes the full row
+          and wraps the action onto a second line, left-aligned under the
+          text. The action stays on the right and never shrinks. */}
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex items-center gap-1.5">
           <h2 className="font-bold text-base leading-tight">
             {title}
@@ -149,7 +184,7 @@ export function SectionHeading({
           <p className="text-muted-foreground text-sm">{description}</p>
         )}
       </div>
-      {action}
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }

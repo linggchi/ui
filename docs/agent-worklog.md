@@ -35,7 +35,7 @@ The commit of the requirements repository (`https://github.com/Accura-One/requir
 
 ## Current status
 
-_As of 2026-11-11 — branch `primary`._
+_As of 2026-11-12 — branch `primary`._
 
 Everything below is in the working tree and **not yet committed**. Three days of work have accumulated on `primary` without a commit; that is the single largest operational risk here. When it is committed, `apps/ui/registry/default/ui/select.tsx` and `packages/ui/src/components/select.tsx` should be separated out: they reach every `@coss/ui` consumer, not only Accura.
 
@@ -150,6 +150,12 @@ All eleven PRD-002 stories were built in one run on 2026-11-11 at the user's dir
 - ~~The periodic-review frequency is the 3-year default~~ — **built 2026-11-11**. Each type carries its own frequency, configured in Settings > Documents, and the document details read it.
 
 ## Work log
+
+### 2026-11-12
+
+- Reworked **Settings > Organisation into a segmented card** (Record Numbering / Departments) matching Users, then settled **where a list section's action sits** after the segmentation exposed a heading row that changed layout per tab. Scanned Atlassian, Primer/GitHub, SAP Fiori and Carbon before deciding; the three-case rule is in [`docs/rules/ui-hierarchy.md` §List screens](rules/ui-hierarchy.md#list-screens) and the new shared `SectionToolbar` is in `apps/accura-prototype/components/accura-form.tsx`. Applied to all five Settings panels. See [`CHANGELOG.md`](../CHANGELOG.md).
+- Fixed `SectionHeading`'s wrap defect (`min-w-0 flex-1` on the text, `shrink-0` on the action) — it reaches every card in the prototype, not only Settings.
+- **Not QA-logged.** `design-qa.md` has no iteration for this work; verification was done live in the browser across all five Settings panels at 1440×900 and `tsc` is clean, but there are no captured screenshots. The catalogue's `list-screen` entry was moved from Ready back to **draft** and needs sign-off as a whole.
 
 ### 2026-11-11
 
