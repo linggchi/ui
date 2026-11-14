@@ -245,7 +245,7 @@ export function DashboardScreen({ onOpenDocuments }: DashboardScreenProps) {
             Your quality workspace
           </p>
           <h1 className="font-bold text-2xl text-[var(--accura-brand-950-darkshade)] leading-tight sm:text-3xl">
-            Good morning, a Tùng đẹp trai
+            Good morning, Amit
           </h1>
           <p className="font-medium text-[var(--accura-brand-950-darkshade)]/75 text-sm">
             Tuesday, 3 November 2026
